@@ -4,22 +4,18 @@ use inkbound_parser::parser::DataLog;
 
 use crate::windows;
 
-
 #[derive(Default)]
-pub struct EnabledWindows {
-    pub show_dive_group_damage: bool,
-    pub show_dive_individual_damage: bool,
-    pub show_combat_group_damage: bool,
-    pub show_combat_individual_damage: bool,
+pub struct WindowState {
+    pub dive_group_damage: windows::GroupDamageState,
+    pub combat_group_damage: windows::GroupDamageState,
+    pub dive_individual_damage: windows::IndividualDamageState,
+    pub combat_individual_damage: windows::IndividualDamageState,
 }
-
 
 // #[derive(Default)]
 pub struct Overlay {
     pub datalog: Arc<RwLock<DataLog>>,
-    pub dive_individual_selection: Option<String>,
-    pub combat_individual_selection: Option<String>,
-    pub enabled_windows: EnabledWindows,
+    pub window_state: WindowState,
     pub closing: bool,
 }
 
@@ -47,10 +43,8 @@ impl Overlay {
     fn do_new(datalog: Arc<RwLock<DataLog>>) -> Self {
         Self {
             datalog,
-            dive_individual_selection: None,
-            combat_individual_selection: None,
             // TODO: probably persist this information
-            enabled_windows: EnabledWindows::default(),
+            window_state: WindowState::default(),
             closing: false,
         }
     }

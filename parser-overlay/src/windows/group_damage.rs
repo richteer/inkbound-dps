@@ -4,9 +4,14 @@ use inkbound_parser::parser::{PlayerStats, DataLog};
 
 use crate::{class_string_to_color, Overlay};
 
+#[derive(Default)]
+pub struct GroupDamageState {
+    pub show: bool,
+}
+
 #[inline]
 pub fn draw_combat_damage_window(overlay: &Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.enabled_windows.show_combat_group_damage {
+    if !overlay.window_state.combat_group_damage.show {
         return;
     }
 
@@ -30,7 +35,7 @@ pub fn draw_combat_damage_window(overlay: &Overlay, ctx: &egui::Context, datalog
 
 #[inline]
 pub fn draw_dive_damage_window(overlay: &Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.enabled_windows.show_dive_group_damage {
+    if !overlay.window_state.dive_group_damage.show {
         return;
     }
 

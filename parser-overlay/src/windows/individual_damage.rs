@@ -6,10 +6,15 @@ use inkbound_parser::parser::{PlayerStats, DataLog};
 
 use crate::{Overlay, class_string_to_color};
 
+#[derive(Default)]
+pub struct IndividualDamageState {
+    pub show: bool,
+    pub player: Option<String>,
+}
 
 #[inline]
 pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.enabled_windows.show_dive_individual_damage {
+    if !overlay.window_state.dive_individual_damage.show {
         return;
     }
 
@@ -19,12 +24,12 @@ pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Con
         // Don't bother with the rest if there isn't dive data
         return;
     };
-    draw_individual_damage_window(ctx, "Dive Individual Damage", &player_stats, &mut overlay.dive_individual_selection);
+    draw_individual_damage_window(ctx, "Dive Individual Damage", &player_stats, &mut overlay.window_state.dive_individual_damage.player);
 }
 
 #[inline]
 pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.enabled_windows.show_combat_individual_damage {
+    if !overlay.window_state.combat_individual_damage.show {
         return;
     }
     
@@ -38,7 +43,7 @@ pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::C
         // Don't bother with the rest if there isn't dive data
         return;
     };
-    draw_individual_damage_window(ctx, "Combat Individual Damage", &player_stats, &mut overlay.combat_individual_selection);
+    draw_individual_damage_window(ctx, "Combat Individual Damage", &player_stats, &mut overlay.window_state.combat_individual_damage.player);
 }
 
 /// Draw the window and player selection combo box, chain into plot drawing logic
