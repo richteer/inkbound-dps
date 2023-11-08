@@ -1,0 +1,202 @@
+use clap::{command, arg};
+use inkbound_parser::{
+    parser::{*},
+    parse_log_to_json,
+};
+
+use std::{sync::{Arc, RwLock}, io::BufReader, fs::File, time::Duration, path::Path};
+use std::io::{
+    Seek,
+    BufRead
+};
+
+use notify_debouncer_mini::{notify::*,new_debouncer};
+
+struct LogReader {
+    reader: BufReader<File>,
+    cache_string: String,
+    cache_events: Vec<inkbound_parser::parser::Event>,
+}
+
+#[inline(always)]
+fn default_logpath() -> String {
+    // Use a local log file for test purposes
+    // TODO: consider committing some trimmed down, sanitized logs to the repo for test cases
+    #[cfg(debug_assertions)]
+    return "./logfile.log".to_string();
+
+    #[cfg(not(debug_assertions))]
+    {
+        #[cfg(target_os = "windows")]
+        return format!("{}\\AppData\\LocalLow\\Shiny Shoe\\Inkbound\\logfile.log", std::env::var("USERPROFILE").unwrap());
+
+        #[cfg(target_os = "linux")]
+        todo!("get default logfile path for linux");
+    }
+}
+
+impl LogReader {
+    fn new(filepath: &str) -> Self {
+        let file = File::open(filepath).unwrap(); // TODO: unwrap
+
+        let reader = std::io::BufReader::new(file);
+        Self {
+            reader,
+            cache_string: String::new(),
+            cache_events: Vec::new(),
+        }
+    }
+
+    // TODO: consider having LogReader contain the LogParser. LogParser may not need to be shared
+    fn reader_to_datalog(&mut self, parser: &Arc<RwLock<LogParser>>, datalog: &Arc<RwLock<DataLog>>) {
+        let mut parser = parser.write().unwrap();
+
+        while self.reader.read_line(&mut self.cache_string).is_ok_and(|size| size != 0) {
+            log::trace!("parsing: {}", self.cache_string);
+            if let Some(event) = parser.parse_line(&self.cache_string.as_str()) {
+                self.cache_events.push(event);
+                // datalog.handle_event(event);
+            }
+            self.cache_string.clear();
+        }
+
+        // Events collected, now acquire write lock to update the datalog
+        {
+            let mut datalog = datalog.write().unwrap();
+            // TODO: consider changing .handle_events to accept an iterator
+            for event in self.cache_events.drain(..) {
+                datalog.handle_event(event);
+            }
+        }
+    }
+
+    fn seek_end(&mut self) {
+        self.reader.seek(std::io::SeekFrom::End(0)).unwrap();
+    }
+}
+
+fn main() {
+    dotenvy::dotenv().ok();
+    env_logger::init();
+
+    // env_logger::Builder::from_env(Env)
+    //     .filter_level(log::LevelFilter::Debug)
+    //     .init();
+
+    let matches = command!()
+        // TODO: Consider making this a subcommand, so that required args can be set properly
+        .arg(arg!(-p --parse <FILE> "Parse a single log into a json string")
+            .required(false)
+        )
+        .arg(arg!(-f --file <FILE> "File to parse and watch for updates")
+            .required(false)
+        )
+        .arg(arg!(-s --"skip-current" "Skip over parsing current log file")
+            .required(false)
+            .action(clap::ArgAction::SetTrue)
+        )
+        .get_matches();
+
+    // Parse-only mode
+    if let Some(file) = matches.get_one::<String>("parse") {
+        println!("{}", parse_log_to_json(file));
+        return
+    }
+
+    let parser = Arc::new(RwLock::new(LogParser::new()));
+    let datalog = Arc::new(RwLock::new(DataLog::new()));
+
+    let filepath = if let Some(filepath) = matches.get_one::<String>("file") {
+        filepath.to_owned()
+    } else {
+        default_logpath()
+    };
+    let mut reader = LogReader::new(filepath.as_str());
+
+    // Catch the parser/log up...
+    if !matches.get_one("skip-current").unwrap_or(&false) {
+        reader.reader_to_datalog(&parser, &datalog);
+    } else {
+        reader.seek_end();
+    }
+
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    // ...then start the watcher
+    let watch_handle = {
+        let parser = parser.clone();
+        let datalog = datalog.clone();
+        std::thread::spawn(move || {
+            log::debug!("spawning watcher receive thread");
+            loop {
+                match rx.recv() {
+                    Ok(Ok(_events)) => {
+                        log::trace!("file update received");
+                        reader.reader_to_datalog(&parser, &datalog);
+                    },
+                    Ok(Err(e)) => {
+                        log::error!("Error from watcher: {:?}, closing thread", e);
+                        break;
+                    },
+                    Err(_) => {
+                        log::debug!("channel closed, exiting watch recv loop");
+                        break;
+                    },
+                };
+            }
+            log::debug!("closing watch recv thread");
+        })
+    };
+
+    log::info!("starting watch of file: {}", filepath);
+
+    // TODO: allow configuration of debounce duration
+    let mut debouncer = new_debouncer(Duration::from_secs(2), tx).unwrap();
+    debouncer.watcher().watch(Path::new(filepath.as_str()), RecursiveMode::NonRecursive).unwrap();
+
+    parser_overlay::spawn_overlay(datalog);
+
+    // Overlay closed, exit and clean-up
+    drop(debouncer); // Drop to close the watch recv thread loop
+    watch_handle.join().unwrap();
+}
+
+    //          move |res: DebounceEventResult| {
+    //         match res {
+    //             Ok(events) => {
+    //                 log::info!("update: {:?}", events);
+    //                 let mut parser = parser.write().unwrap();
+    //                 let mut datalog = datalog.write().unwrap();
+    //                 reader.lines()
+    //                     .filter_map(|l| l.ok())
+    //                     .filter_map(|l| parser.parse_line(l.as_str()))
+    //                     .for_each(|e| datalog.handle_event(e));
+    //             },
+    //             Err(e) => log::error!("Error received from watcher: {:?}", e),
+    //         }
+    //     }).unwrap()
+    // };
+
+
+    // desktop_ui::spawn_overlay();
+
+    // TODO: probably actually close this loop
+    // log::debug!("waiting on watch recv thread...");
+    // handle.join().unwrap();
+
+    // TODO: Channel this for closure
+    // let handle = {
+    //     let parser = parser.clone();
+    //     let datalog = datalog.clone();
+    //     std::thread::spawn(move || {
+    //         let file = std::fs::read_to_string("logfile.log").unwrap();
+    //         let file: Vec<&str> = file.split('\n').collect();
+
+    //         let events = {
+    //             let mut parser = parser.write().unwrap();
+    //             parser.parse_lines(file.as_slice())
+    //         };
+    //         let mut datalog = datalog.write().unwrap();
+    //         datalog.handle_events(events);
+    //     })
+    // };

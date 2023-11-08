@@ -1,0 +1,20 @@
+[package]
+name = "main"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "inkbound-dps"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.4.7", features = ["cargo"] }
+dotenvy = "0.15.7"
+env_logger = "0.10.0"
+inkbound-parser.workspace = true
+log.workspace = true
+notify-debouncer-mini = "0.4.1"
+parser-overlay = { version = "0.1.0", path = "../parser-overlay", default-features = false, features = ["use_eframe"]}
+# parser-overlay = { version = "0.1.0", path = "../parser-overlay", default-features = false, features = ["use_egui_overlay"]}
