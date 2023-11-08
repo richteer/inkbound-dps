@@ -27,7 +27,7 @@ pub fn draw_combat_damage_window(overlay: &Overlay, ctx: &egui::Context, datalog
             } else {
                 Vec::new()
             }
-        }; // Close here to release lock
+        };
 
         draw_group_damage_plot(ui, statlist, name);
     });
@@ -47,7 +47,7 @@ pub fn draw_dive_damage_window(overlay: &Overlay, ctx: &egui::Context, datalog: 
             } else {
                 Vec::new()
             }
-        }; // Close here to release lock
+        };
 
         draw_group_damage_plot(ui, statlist, name);
     });    
