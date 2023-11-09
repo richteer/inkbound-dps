@@ -51,7 +51,7 @@ pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::C
 fn draw_individual_damage_window(ctx: &egui::Context, name: &str, player_stats: &HashMap<String, PlayerStats>, selection: &mut Option<String>) {
     Window::new(name).show(ctx, |ui| {
 
-        Box::new(egui::ComboBox::from_label("Select Player"))
+        egui::ComboBox::from_label("Select Player")
             .selected_text(format!("{}", selection.as_ref().unwrap_or(&"".to_string())))
             .show_ui(ui, |ui| {
                 for player in player_stats.keys() {
