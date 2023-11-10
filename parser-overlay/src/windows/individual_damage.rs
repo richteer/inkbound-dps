@@ -6,10 +6,13 @@ use inkbound_parser::parser::{PlayerStats, DataLog};
 
 use crate::{Overlay, class_string_to_color};
 
+use super::show_dive_selection_box;
+
 #[derive(Default)]
 pub struct IndividualDamageState {
     pub show: bool,
     pub player: Option<String>,
+    pub dive: usize,
 }
 
 #[inline]
@@ -18,13 +21,13 @@ pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Con
         return;
     }
 
-    let player_stats = if let Some(dive) = datalog.dives.get(0) {
+    let player_stats = if let Some(dive) = datalog.dives.get(overlay.window_state.dive_individual_damage.dive) {
         dive.player_stats.player_stats.clone()
     } else {
         // Don't bother with the rest if there isn't dive data
         return;
     };
-    draw_individual_damage_window(ctx, "Dive Individual Damage", &player_stats, &mut overlay.window_state.dive_individual_damage.player);
+    draw_individual_damage_window(ctx, "Dive Individual Damage", &player_stats, &mut overlay.window_state.dive_individual_damage.player, &mut overlay.window_state.dive_individual_damage.dive, datalog.dives.len());
 }
 
 #[inline]
@@ -33,7 +36,7 @@ pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::C
         return;
     }
     
-    let player_stats = if let Some(dive) = datalog.dives.get(0) {
+    let player_stats = if let Some(dive) = datalog.dives.get(overlay.window_state.combat_individual_damage.dive) {
         if let Some(combat) = dive.combats.get(0) {
             combat.player_stats.player_stats.clone()
         } else {
@@ -43,13 +46,15 @@ pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::C
         // Don't bother with the rest if there isn't dive data
         return;
     };
-    draw_individual_damage_window(ctx, "Combat Individual Damage", &player_stats, &mut overlay.window_state.combat_individual_damage.player);
+    draw_individual_damage_window(ctx, "Combat Individual Damage", &player_stats, &mut overlay.window_state.combat_individual_damage.player, &mut overlay.window_state.combat_individual_damage.dive, datalog.dives.len());
 }
 
 /// Draw the window and player selection combo box, chain into plot drawing logic
 #[inline]
-fn draw_individual_damage_window(ctx: &egui::Context, name: &str, player_stats: &HashMap<String, PlayerStats>, selection: &mut Option<String>) {
+fn draw_individual_damage_window(ctx: &egui::Context, name: &str, player_stats: &HashMap<String, PlayerStats>, selection: &mut Option<String>, dive: &mut usize, num_dives: usize) {
     Window::new(name).show(ctx, |ui| {
+        // TODO: clean this up, there's too many arguments to this function. Either factor more into this function, or less
+        show_dive_selection_box(ui, dive, num_dives);
 
         egui::ComboBox::from_label("Select Player")
             .selected_text(format!("{}", selection.as_ref().unwrap_or(&"".to_string())))

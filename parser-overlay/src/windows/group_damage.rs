@@ -4,22 +4,27 @@ use inkbound_parser::parser::{PlayerStats, DataLog};
 
 use crate::{class_string_to_color, Overlay};
 
+use super::show_dive_selection_box;
+
 #[derive(Default)]
 pub struct GroupDamageState {
     pub show: bool,
+    pub dive: usize,
 }
 
 #[inline]
-pub fn draw_combat_damage_window(overlay: &Overlay, ctx: &egui::Context, datalog: &DataLog) {
+pub fn draw_combat_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
     if !overlay.window_state.combat_group_damage.show {
         return;
     }
 
     let name = "Combat Group Damage";
     Window::new(name).show(ctx, |ui| {
+        show_dive_selection_box(ui, &mut overlay.window_state.combat_group_damage.dive, datalog.dives.len());
+
         let statlist: Vec<PlayerStats> = {
-            if let Some(dive) = datalog.dives.get(0) {
-                if let Some(combat) = dive.combats.get(0) {
+            if let Some(dive) = datalog.dives.get(overlay.window_state.combat_group_damage.dive) {
+                if let Some(combat) = dive.combats.get(overlay.window_state.combat_group_damage.dive) {
                     combat.player_stats.player_stats.values().cloned().collect()
                 } else {
                     Vec::new()
@@ -34,15 +39,17 @@ pub fn draw_combat_damage_window(overlay: &Overlay, ctx: &egui::Context, datalog
 }
 
 #[inline]
-pub fn draw_dive_damage_window(overlay: &Overlay, ctx: &egui::Context, datalog: &DataLog) {
+pub fn draw_dive_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
     if !overlay.window_state.dive_group_damage.show {
         return;
     }
 
     let name = "Dive Group Damage";
     Window::new(name).show(ctx, |ui| {
+        show_dive_selection_box(ui, &mut overlay.window_state.dive_group_damage.dive, datalog.dives.len());
+
         let statlist: Vec<PlayerStats> = {
-            if let Some(dive) = datalog.dives.get(0) {
+            if let Some(dive) = datalog.dives.get(overlay.window_state.dive_group_damage.dive) {
                 dive.player_stats.player_stats.values().cloned().collect()
             } else {
                 Vec::new()
