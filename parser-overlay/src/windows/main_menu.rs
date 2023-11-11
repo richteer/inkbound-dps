@@ -15,6 +15,7 @@ pub fn main_menu(overlay: &mut Overlay, ctx: &egui::Context) {
             ui.checkbox(&mut overlay.window_state.combat_group_damage.show, "Show Group Damage");
             ui.checkbox(&mut overlay.window_state.combat_individual_damage.show, "Show Individual Damage");
             ui.separator();
+            ui.add(egui::Slider::new(&mut overlay.plot_font_size, 4.0..=32.0).text("Plot font size"));
             if ui.button("Close Overlay").clicked() {
                 overlay.closing = true;
             }

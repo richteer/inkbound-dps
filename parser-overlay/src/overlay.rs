@@ -17,6 +17,7 @@ pub struct Overlay {
     pub datalog: Arc<RwLock<DataLog>>,
     pub window_state: WindowState,
     pub closing: bool,
+    pub plot_font_size: f32,
 }
 
 impl Overlay {
@@ -46,6 +47,7 @@ impl Overlay {
             // TODO: probably persist this information
             window_state: WindowState::default(),
             closing: false,
+            plot_font_size: 14.0,
         }
     }
 }

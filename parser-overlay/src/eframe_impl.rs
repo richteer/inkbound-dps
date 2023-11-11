@@ -44,6 +44,11 @@ impl eframe::App for Overlay {
         #[cfg(not(debug_assertions))]
         frame.set_maximized(true);
 
+        // TODO: maybe don't run this every update?
+        ctx.style_mut(|style| {
+            style.text_styles.insert(egui::style::TextStyle::Small, egui::FontId { size: self.plot_font_size, family: egui::FontFamily::Proportional }).unwrap();
+        });
+
         use mouse_position::mouse_position::Mouse;
         match Mouse::get_mouse_position() {
             Mouse::Position { x, y } => {
