@@ -3,6 +3,7 @@
 mod tests {
 
     #[test]
+    #[ignore] // TODO: skip until there's a sanitized log to actually parse
     fn test_logfile() {
         // TODO: use parse_log_to_json
         // env_logger::Builder::new()
