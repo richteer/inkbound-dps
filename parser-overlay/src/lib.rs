@@ -30,7 +30,9 @@ fn class_string_to_color(class_name: &str) -> egui::Color32 {
         // "Star Captain" => egui::Color32::from_rgb(244, 196, 48),
         "Star Captain" => egui::Color32::from_rgb(0, 119, 140),
         // TODO: Chainbreaker, Godseeker
-        _ => egui::Color32::LIGHT_GRAY,
+        "Chainbreaker" => egui::Color32::from_rgb(107, 0, 52),
+        "Godseeker" => egui::Color32::from_rgb(150, 131, 2),
+        _ => egui::Color32::DARK_GRAY,
     }
 }
 
