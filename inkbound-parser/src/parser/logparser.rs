@@ -169,11 +169,12 @@ mod tests {
     static L_DAMAGE_NORMAL: &'static str = "0T23:17:51 70 I [EventSystem] broadcasting EventOnUnitDamaged-WorldStateChangeDamageUnit-TargetUnitHandle:(EntityHandle:78)-SourceEntityHandle:(EntityHandle:22)-TargetUnitTeam:Enemy-IsInActiveCombat:True-DamageAmount:25-IsCriticalHit:False-WasDodged:False-ActionData:ActionData-Flurry_BaseDamage_Action (UPNE5APs)-AbilityData:AbilityData-Flurry_AbilityData (Flurry my7gMbFo)-StatusEffectData:(none)-LootableData:(none)";
     static L_DAMAGE_CRIT: &'static str = "0T23:17:51 70 I [EventSystem] broadcasting EventOnUnitDamaged-WorldStateChangeDamageUnit-TargetUnitHandle:(EntityHandle:78)-SourceEntityHandle:(EntityHandle:22)-TargetUnitTeam:Enemy-IsInActiveCombat:True-DamageAmount:25-IsCriticalHit:True-WasDodged:False-ActionData:ActionData-Flurry_BaseDamage_Action (UPNE5APs)-AbilityData:AbilityData-Flurry_AbilityData (Flurry my7gMbFo)-StatusEffectData:(none)-LootableData:(none)";
     static L_DAMAGE_DODGED: &'static str = "0T23:17:51 70 I [EventSystem] broadcasting EventOnUnitDamaged-WorldStateChangeDamageUnit-TargetUnitHandle:(EntityHandle:78)-SourceEntityHandle:(EntityHandle:22)-TargetUnitTeam:Enemy-IsInActiveCombat:True-DamageAmount:25-IsCriticalHit:False-WasDodged:True-ActionData:ActionData-Flurry_BaseDamage_Action (UPNE5APs)-AbilityData:AbilityData-Flurry_AbilityData (Flurry my7gMbFo)-StatusEffectData:(none)-LootableData:(none)";
-    static L_UNIT_CLASS: &'static str = "0T23:24:03 57 I Setting unit class for animation-UnitEntityHandle:(EntityHandle:10)-classType:C01";
+    static L_UNIT_CLASS: &'static str = "0T23:24:03 57 I Setting unit class for animation-UnitEntityHandle:(EntityHandle:22)-classType:C02";
     static L_START_DIVE: &'static str = "0T23:24:45 80 I Party run start triggered - solo party: False";
     static L_START_COMBAT: &'static str = "0T23:26:31 50 I [EventSystem] broadcasting EventOnCombatStarted-WorldStateChangeCombatStarted-CombatZoneHandle:(EntityHandle:68)-TriggeringInteractableHandle:(EntityHandle:69)";
     static L_END_COMBAT: &'static str = "0T23:47:19 32 I [EventSystem] broadcasting EventOnCombatEndSequenceStarted-WorldStateChangeCombatFinishedStartSequence";
     static L_NEXT_TURN: &'static str = "0T23:45:57 21 I Evaluating quest progress for (EntityHandle:16) with 101 active quests. Record variable: QuestObjective_TurnCount";
+    static L_REGISTER_NAME: &'static str = "0T23:17:51 66 I TestPlayer (EntityHandle:22) is playing ability AbilityData-Flurry_AbilityData (Flurry my7gMbFo)";
 
     #[test]
     fn parse_damage_line() {
@@ -237,8 +238,8 @@ mod tests {
 
         match &line {
             ParseEvent::Internal(InternalEvent::UnitClass(_, id, class)) => {
-                assert_eq!(*id, 10);
-                assert_eq!(*class, "C01".to_string());
+                assert_eq!(*id, 22);
+                assert_eq!(*class, "C02".to_string());
             },
             _ => {
                 println!("received {:?}", line);
@@ -329,5 +330,91 @@ mod tests {
         data_log.handle_events(events);
 
         println!("{}", serde_json::to_string(&data_log).unwrap());
+    }
+
+    #[test]
+    fn test_logfile_append() {
+        use std::io::*;
+        use std::fs::*;
+
+        const LOGFILE_NAME: &'static str = "testing_logfile.log";
+
+        let waiter = std::sync::Arc::new(std::sync::Barrier::new(2));
+
+        {
+            let waiter = waiter.clone();
+            std::thread::spawn(move || {
+                let mut file = std::fs::File::create(LOGFILE_NAME).unwrap();
+                // TODO: consider putting the newlines into the strings, or doing this cleaner
+                file.write(L_START_DIVE.as_bytes()).unwrap();
+                file.write(b"\n").unwrap();
+                file.write(L_START_COMBAT.as_bytes()).unwrap();
+                file.write(b"\n").unwrap();
+                file.write(L_REGISTER_NAME.as_bytes()).unwrap();
+                file.write(b"\n").unwrap();
+                file.write(L_UNIT_CLASS.as_bytes()).unwrap();
+                file.write(b"\n").unwrap();
+                file.write(L_DAMAGE_NORMAL.as_bytes()).unwrap();
+                file.write(b"\n").unwrap();
+                file.flush().unwrap();
+
+                waiter.wait(); // Let the reading thread parse the initial lines
+                waiter.wait(); // Wait on the reading thread to be done parsing initial lines
+
+                file.write(L_DAMAGE_NORMAL.as_bytes()).unwrap();
+                file.write(b"\n").unwrap();
+                file.flush().unwrap();
+
+                waiter.wait(); // Let the reading thread parse the last line
+            });
+        };
+
+        let mut parser = crate::parser::LogParser::new();
+        let mut datalog = crate::parser::DataLog::new();
+
+        // Wait for the writing thread to write the initial lines
+        waiter.wait();
+
+        let file = File::open(LOGFILE_NAME).unwrap();
+        let mut reader = BufReader::new(file);
+
+        // TODO: really consider just using the actual code here
+        let mut cache_string = String::new();
+        while reader.read_line(&mut cache_string).unwrap() != 0 {
+            println!("read: {}", cache_string);
+            if let Some(event) = parser.parse_line(&cache_string.as_str()) {
+                datalog.handle_event(event);
+            }
+        }
+
+        let dive = datalog.dives.get(0);
+        assert!(dive.is_some());
+        let dive = dive.unwrap();
+        // TODO: consider asserting combat info too
+        let testplayer = dive.player_stats.player_stats.get("TestPlayer");
+        assert!(testplayer.is_some());
+        let testplayer = testplayer.unwrap();
+        assert!(testplayer.total_damage_dealt == 25);
+
+        waiter.wait(); // Let the writing thread append a new line
+        waiter.wait(); // Writing thread is done appending a new line
+
+        let mut cache_string = String::new();
+        while reader.read_line(&mut cache_string).unwrap() != 0 {
+            println!("read: {}", cache_string);
+            if let Some(event) = parser.parse_line(&cache_string.as_str()) {
+                datalog.handle_event(event);
+            }
+        }
+
+        let dive = datalog.dives.get(0);
+        assert!(dive.is_some());
+        let dive = dive.unwrap();
+        // TODO: consider asserting combat info too
+        let testplayer = dive.player_stats.player_stats.get("TestPlayer");
+        assert!(testplayer.is_some());
+        let testplayer = testplayer.unwrap();
+        assert!(testplayer.total_damage_dealt == 50);
+
     }
 }
