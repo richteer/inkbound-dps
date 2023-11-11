@@ -10,7 +10,7 @@ use std::io::{
     BufRead
 };
 
-use notify_debouncer_mini::{notify::*,new_debouncer};
+use notify::{Watcher, RecursiveMode};
 
 struct LogReader {
     reader: BufReader<File>,
@@ -150,14 +150,14 @@ fn main() {
 
     log::info!("starting watch of file: {}", filepath);
 
-    // TODO: allow configuration of debounce duration
-    let mut debouncer = new_debouncer(Duration::from_secs(2), tx).unwrap();
-    debouncer.watcher().watch(Path::new(filepath.as_str()), RecursiveMode::NonRecursive).unwrap();
+    // TODO: allow configuration of poll duration
+    let mut watcher = notify::PollWatcher::new(tx, notify::Config::default().with_poll_interval(Duration::from_secs(2))).unwrap();
+    watcher.watch(Path::new(filepath.as_str()), RecursiveMode::NonRecursive).unwrap();
 
     parser_overlay::spawn_overlay(datalog);
 
     // Overlay closed, exit and clean-up
-    drop(debouncer); // Drop to close the watch recv thread loop
+    drop(watcher); // Drop to close the watch recv thread loop
     watch_handle.join().unwrap();
 }
 
