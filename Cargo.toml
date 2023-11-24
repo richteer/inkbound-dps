@@ -11,5 +11,5 @@ inkbound-parser = { path = "./inkbound-parser" }
 log = "0.4.20"
 
 [patch.crates-io]
-egui = { git = "https://github.com/richteer/egui", branch = "eframe-overlay" }
-eframe = { git = "https://github.com/richteer/egui", branch = "eframe-overlay" }
+egui = { git = "https://github.com/richteer/egui", branch = "eframe-overlay-0.23.0" }
+eframe = { git = "https://github.com/richteer/egui", branch = "eframe-overlay-0.23.0" }
