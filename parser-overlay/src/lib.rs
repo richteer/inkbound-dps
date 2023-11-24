@@ -2,8 +2,6 @@ mod windows;
 mod overlay;
 pub use overlay::*;
 
-mod eframe_impl;
-
 // TODO: Make this configurable and save to layout state
 fn class_string_to_color(class_name: &str) -> egui::Color32 {
     // TODO: use a complete lookup table so this only needs to be updated in one place
