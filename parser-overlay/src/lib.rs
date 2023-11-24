@@ -2,16 +2,7 @@ mod windows;
 mod overlay;
 pub use overlay::*;
 
-#[cfg(all(feature = "use_eframe", feature = "use_egui_overlay"))]
-compile_error!("Features use_eframe and use_egui_overlay are mutually exclusive, select only one");
-// TODO: consider no-gui builds
-#[cfg(not(any(feature = "use_eframe", feature = "use_egui_overlay")))]
-compile_error!("Must enable either the use_eframe feature or use_egui_overlay feature");
-
-#[cfg(feature = "use_eframe")]
 mod eframe_impl;
-#[cfg(feature = "use_egui_overlay")]
-mod egui_overlay_impl;
 
 // TODO: Make this configurable and save to layout state
 fn class_string_to_color(class_name: &str) -> egui::Color32 {

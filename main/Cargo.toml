@@ -16,5 +16,4 @@ env_logger = "0.10.0"
 inkbound-parser.workspace = true
 log.workspace = true
 notify = "6.1.1"
-parser-overlay = { version = "0.1.0", path = "../parser-overlay", default-features = false, features = ["use_eframe"]}
-# parser-overlay = { version = "0.1.0", path = "../parser-overlay", default-features = false, features = ["use_egui_overlay"]}
+parser-overlay = { version = "0.1.0", path = "../parser-overlay"}

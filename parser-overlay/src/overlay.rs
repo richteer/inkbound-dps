@@ -21,7 +21,6 @@ pub struct Overlay {
 }
 
 impl Overlay {
-    #[cfg(feature = "use_eframe")]
     pub fn new(_cc: &eframe::CreationContext<'_>, datalog: Arc<RwLock<DataLog>>) -> Self {
         // Customize egui here with cc.egui_ctx.set_fonts and cc.egui_ctx.set_visuals.
         // Restore app state using cc.storage (requires the "persistence" feature).
@@ -33,15 +32,6 @@ impl Overlay {
             ..Default::default()
         });
 
-        Self::do_new(datalog)
-    }
-
-    #[cfg(feature = "use_egui_overlay")]
-    pub fn new(datalog: Arc<RwLock<DataLog>>) -> Self {
-        Self::do_new(datalog)
-    }
-
-    fn do_new(datalog: Arc<RwLock<DataLog>>) -> Self {
         Self {
             datalog,
             // TODO: probably persist this information
@@ -69,15 +59,6 @@ pub fn draw_overlay(overlay: &mut Overlay, ctx: &egui::Context) {
 
 /// Entrypoint for the main application to spawn the actual overlay window and such
 pub fn spawn_overlay(datalog: Arc<RwLock<DataLog>>) {
-    #[cfg(feature = "use_eframe")]
-    {
-        log::debug!("using eframe-based backend");
-        crate::eframe_impl::spawn_overlay(datalog);
-    }
-    #[cfg(feature = "use_egui_overlay")]
-    {
-        log::debug!("using egui_overlay-based backend");
-        crate::egui_overlay_impl::spawn_overlay(datalog);
-    }
+    crate::eframe_impl::spawn_overlay(datalog);
 }
 
