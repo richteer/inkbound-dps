@@ -31,7 +31,7 @@ fn default_logpath() -> String {
         return format!("{}\\AppData\\LocalLow\\Shiny Shoe\\Inkbound\\logfile.log", std::env::var("USERPROFILE").unwrap());
 
         #[cfg(target_os = "linux")]
-        todo!("get default logfile path for linux");
+        return format!("{}/.steam/steam/steamapps/compatdata/1062810/pfx/drive_c/users/steamuser/AppData/LocalLow/Shiny Shoe/Inkbound/logfile.log", std::env::var("HOME").unwrap());
     }
 }
 
