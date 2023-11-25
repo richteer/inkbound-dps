@@ -8,13 +8,12 @@ use super::show_dive_selection_box;
 
 #[derive(Default)]
 pub struct GroupDamageState {
-    pub show: bool,
     pub dive: usize,
 }
 
 #[inline]
 pub fn draw_combat_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.window_state.combat_group_damage.show {
+    if !overlay.options.show_combat_group_damage {
         return;
     }
 
@@ -40,7 +39,7 @@ pub fn draw_combat_damage_window(overlay: &mut Overlay, ctx: &egui::Context, dat
 
 #[inline]
 pub fn draw_dive_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.window_state.dive_group_damage.show {
+    if !overlay.options.show_dive_group_damage {
         return;
     }
 

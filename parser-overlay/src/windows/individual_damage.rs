@@ -10,14 +10,13 @@ use super::show_dive_selection_box;
 
 #[derive(Default)]
 pub struct IndividualDamageState {
-    pub show: bool,
     pub player: Option<String>,
     pub dive: usize,
 }
 
 #[inline]
 pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.window_state.dive_individual_damage.show {
+    if !overlay.options.show_dive_individual_damage {
         return;
     }
 
@@ -32,7 +31,7 @@ pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Con
 
 #[inline]
 pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.window_state.combat_individual_damage.show {
+    if !overlay.options.show_combat_individual_damage {
         return;
     }
     

@@ -2,8 +2,11 @@ use std::sync::{Arc, RwLock};
 
 use egui::{Visuals, Pos2};
 use inkbound_parser::parser::DataLog;
+use serde::{Serialize, Deserialize};
 
 use crate::windows;
+
+static OPTIONS_STORAGE_KEY: &'static str = "overlayoptions";
 
 #[derive(Default)]
 pub struct WindowState {
@@ -13,13 +16,37 @@ pub struct WindowState {
     pub combat_individual_damage: windows::IndividualDamageState,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct OverlayOptions {
+    pub show_dive_group_damage: bool,
+    pub show_combat_group_damage: bool,
+    pub show_dive_individual_damage: bool,
+    pub show_combat_individual_damage: bool,
+    pub plot_font_size: f32,
+}
+
+// TODO: consider using a crate to make this whole impl not necessary
+impl Default for OverlayOptions {
+    fn default() -> Self {
+        Self {
+            show_dive_group_damage: false,
+            show_combat_group_damage: false,
+            show_dive_individual_damage: false,
+            show_combat_individual_damage: false,
+            plot_font_size: 14.0,
+        }
+    }
+}
+
 // #[derive(Default)]
 pub struct Overlay {
     pub datalog: Arc<RwLock<DataLog>>,
     pub window_state: WindowState,
+    pub options: OverlayOptions,
     pub closing: bool,
-    pub plot_font_size: f32,
 }
+
+
 
 impl Overlay {
     pub fn new(_cc: &eframe::CreationContext<'_>, datalog: Arc<RwLock<DataLog>>) -> Self {
@@ -33,12 +60,32 @@ impl Overlay {
             ..Default::default()
         });
 
+        let options = if let Some(storage) = _cc.storage {
+            let options = storage.get_string(OPTIONS_STORAGE_KEY);
+            if let Some(options) = options {
+                match ron::from_str(options.as_str()) {
+                    Ok(options) => options,
+                    Err(e) => {
+                        log::warn!("options parse error: {:?}", e);
+                        log::warn!("failed to parse stored options, reverting to default options");
+                        OverlayOptions::default()
+                    }
+                }
+            } else {
+                log::debug!("no options to load, using defaults");
+                OverlayOptions::default()
+            }
+        } else {
+            log::warn!("failed to load persistence storage, using default options");
+            OverlayOptions::default()
+        };
+
         Self {
             datalog,
             // TODO: probably persist this information
             window_state: WindowState::default(),
+            options,
             closing: false,
-            plot_font_size: 14.0,
         }
     }
 }
@@ -46,6 +93,13 @@ impl Overlay {
 impl eframe::App for Overlay {
     fn clear_color(&self, _visuals: &Visuals) -> [f32; 4] {
         egui::Rgba::TRANSPARENT.to_rgba_unmultiplied()
+    }
+
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        match ron::to_string(&self.options) {
+            Ok(options) => storage.set_string(OPTIONS_STORAGE_KEY, options),
+            Err(e) => log::error!("failed to serialize options: {:?}", e),
+        }
     }
 
     // TODO: seriously consider preformatting the information on the parse thread
@@ -58,7 +112,7 @@ impl eframe::App for Overlay {
 
         // TODO: maybe don't run this every update?
         ctx.style_mut(|style| {
-            style.text_styles.insert(egui::style::TextStyle::Small, egui::FontId { size: self.plot_font_size, family: egui::FontFamily::Proportional }).unwrap();
+            style.text_styles.insert(egui::style::TextStyle::Small, egui::FontId { size: self.options.plot_font_size, family: egui::FontFamily::Proportional }).unwrap();
         });
 
         use mouse_position::mouse_position::Mouse;

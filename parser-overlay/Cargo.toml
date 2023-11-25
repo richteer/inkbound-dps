@@ -10,7 +10,9 @@ egui = "0.23.0"
 egui_plot = "0.23.0"
 inkbound-parser.workspace = true
 log.workspace = true
+serde.workspace = true
 
 eframe = { version = "0.23.0", features = ["persistence"] }
 mouse_position = "0.1.3"
+ron = "0.8.1"
 
