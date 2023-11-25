@@ -7,6 +7,9 @@ pub use individual_damage::*;
 mod group_damage;
 pub use group_damage::*;
 
+mod history;
+pub use history::*;
+
 #[inline]
 pub fn inverted_number_label(current: usize, total: usize) -> String {
     format!("{}{}", total - current, if current == 0 {

@@ -14,6 +14,7 @@ pub struct WindowState {
     pub combat_group_damage: windows::GroupDamageState,
     pub dive_individual_damage: windows::IndividualDamageState,
     pub combat_individual_damage: windows::IndividualDamageState,
+    pub history: windows::HistoryState,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -22,6 +23,7 @@ pub struct OverlayOptions {
     pub show_combat_group_damage: bool,
     pub show_dive_individual_damage: bool,
     pub show_combat_individual_damage: bool,
+    pub show_history: bool,
     pub default_player_name: String,
     pub plot_font_size: f32,
 }
@@ -34,6 +36,7 @@ impl Default for OverlayOptions {
             show_combat_group_damage: false,
             show_dive_individual_damage: false,
             show_combat_individual_damage: false,
+            show_history: false,
             default_player_name: "".to_string(),
             plot_font_size: 14.0,
         }
@@ -161,6 +164,7 @@ pub fn draw_overlay(overlay: &mut Overlay, ctx: &egui::Context) {
     windows::draw_combat_damage_window(overlay, ctx, &datalog);
     windows::draw_dive_individual_damage_window(overlay, ctx, &datalog);
     windows::draw_combat_individual_damage_window(overlay, ctx, &datalog);
+    windows::draw_history_window(overlay, ctx, &datalog);
 }
 
 
