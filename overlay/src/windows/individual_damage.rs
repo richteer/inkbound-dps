@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use egui::{Window, Ui};
 use egui_plot::{Plot, BarChart, Bar, Text, PlotPoint};
 use inkbound_parser::parser::{PlayerStats, DataLog, CombatLog};
@@ -26,7 +24,29 @@ pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Con
         // Don't bother with the rest if there isn't dive data
         return;
     };
-    draw_individual_damage_window(ctx, "Dive Individual Damage", &player_stats, &mut overlay.window_state.dive_individual_damage.player, &mut overlay.window_state.dive_individual_damage.dive, datalog.dives.len());
+
+    let name = "Dive Individual Damage";
+    let selection = &mut overlay.window_state.dive_individual_damage.player;
+
+    Window::new(name).show(ctx, |ui| {
+        show_dive_selection_box(ui, &mut overlay.window_state.dive_individual_damage.dive, datalog.dives.len());
+
+        egui::ComboBox::from_label("Select Player")
+            .selected_text(format!("{}", selection.as_ref().unwrap_or(&"".to_string())))
+            .show_ui(ui, |ui| {
+                for player in player_stats.keys() {
+                    ui.selectable_value(selection, Some(player.clone()), player);
+                }
+            }
+        );
+        if let Some(selection) = selection {
+            if let Some(player_stats) = player_stats.get(selection) {
+                draw_individual_damage_plot(ui, player_stats, name);
+            }
+        } else if let Some(player_stats) = player_stats.get(&overlay.options.default_player_name) {
+            draw_individual_damage_plot(ui, player_stats, name);
+        }
+    });
 }
 
 #[inline]
@@ -70,29 +90,8 @@ pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::C
             if let Some(player_stats) = player_stats.get(selection) {
                 draw_individual_damage_plot(ui, player_stats, name);
             }
-        }
-    });
-}
-
-/// Draw the window and player selection combo box, chain into plot drawing logic
-#[inline]
-fn draw_individual_damage_window(ctx: &egui::Context, name: &str, player_stats: &HashMap<String, PlayerStats>, selection: &mut Option<String>, dive: &mut usize, num_dives: usize) {
-    Window::new(name).show(ctx, |ui| {
-        // TODO: clean this up, there's too many arguments to this function. Either factor more into this function, or less
-        show_dive_selection_box(ui, dive, num_dives);
-
-        egui::ComboBox::from_label("Select Player")
-            .selected_text(format!("{}", selection.as_ref().unwrap_or(&"".to_string())))
-            .show_ui(ui, |ui| {
-                for player in player_stats.keys() {
-                    ui.selectable_value(selection, Some(player.clone()), player);
-                }
-            }
-        );
-        if let Some(selection) = selection {
-            if let Some(player_stats) = player_stats.get(selection) {
-                draw_individual_damage_plot(ui, player_stats, name);
-            }
+        } else if let Some(player_stats) = player_stats.get(&overlay.options.default_player_name) {
+            draw_individual_damage_plot(ui, player_stats, name);
         }
     });
 }
