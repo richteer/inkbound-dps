@@ -18,12 +18,13 @@ pub struct WindowState {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct OverlayOptions {
     pub show_dive_group_damage: bool,
     pub show_combat_group_damage: bool,
     pub show_dive_individual_damage: bool,
     pub show_combat_individual_damage: bool,
-    pub show_history: bool,
+    pub history: windows::HistoryOptions,
     pub default_player_name: String,
     pub plot_font_size: f32,
 }
@@ -36,7 +37,7 @@ impl Default for OverlayOptions {
             show_combat_group_damage: false,
             show_dive_individual_damage: false,
             show_combat_individual_damage: false,
-            show_history: false,
+            history: windows::HistoryOptions::default(),
             default_player_name: "".to_string(),
             plot_font_size: 14.0,
         }

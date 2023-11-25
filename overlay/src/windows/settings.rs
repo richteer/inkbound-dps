@@ -11,7 +11,7 @@ pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
                 .on_hover_text("Enable a plot showing the overall damage per player in a particular dive.");
             ui.checkbox(&mut overlay.options.show_dive_individual_damage, "Show Individual Damage")
                 .on_hover_text("Enable a plot showing the damage per skill for a player in a dive.");
-            ui.checkbox(&mut overlay.options.show_history, "Show History")
+            ui.checkbox(&mut overlay.options.history.show, "Show History")
                 .on_hover_text("Enable a plot that shows the history of a dive per each combat");
             ui.separator();
             ui.heading("Combat Overlays");
