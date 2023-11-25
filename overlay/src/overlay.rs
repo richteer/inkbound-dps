@@ -158,7 +158,7 @@ pub fn draw_overlay(overlay: &mut Overlay, ctx: &egui::Context) {
         //  update clone only if data changed, etc
         overlay.datalog.read().unwrap().clone()
     };
-    windows::main_menu(overlay, ctx);
+    windows::draw_settings_window(overlay, ctx);
     windows::draw_dive_damage_window(overlay, ctx, &datalog);
     windows::draw_combat_damage_window(overlay, ctx, &datalog);
     windows::draw_dive_individual_damage_window(overlay, ctx, &datalog);

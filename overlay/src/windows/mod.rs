@@ -1,5 +1,5 @@
-mod main_menu;
-pub use main_menu::*;
+mod settings;
+pub use settings::*;
 
 mod individual_damage;
 pub use individual_damage::*;

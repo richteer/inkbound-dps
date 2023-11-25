@@ -3,9 +3,8 @@ use egui::Window;
 use crate::Overlay;
 
 
-pub fn main_menu(overlay: &mut Overlay, ctx: &egui::Context) {
-    Window::new("Main Menu")
-        // .resizable(false)
+pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
+    Window::new("Settings")
         .show(ctx, |ui| {
             ui.heading("Dive Overlays");
             ui.checkbox(&mut overlay.options.show_dive_group_damage, "Show Group Damage")
