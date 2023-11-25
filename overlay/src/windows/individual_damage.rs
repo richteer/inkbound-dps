@@ -134,6 +134,8 @@ fn draw_individual_damage_plot(ui: &mut Ui, player_stats: &PlayerStats, name: &s
         .allow_drag(false)
         .allow_scroll(false)
         .allow_zoom(false)
+        .auto_bounds_x()
+        .auto_bounds_y()
         .show_grid(false)
         .show_axes(false)
         .show_background(false)

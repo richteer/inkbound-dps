@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use egui::{Visuals, Pos2};
+use egui::{Visuals, Pos2, ViewportBuilder, ViewportCommand};
 use inkbound_parser::parser::DataLog;
 use serde::{Serialize, Deserialize};
 
@@ -49,7 +49,6 @@ pub struct Overlay {
 }
 
 
-
 impl Overlay {
     pub fn new(_cc: &eframe::CreationContext<'_>, datalog: Arc<RwLock<DataLog>>) -> Self {
         // Customize egui here with cc.egui_ctx.set_fonts and cc.egui_ctx.set_visuals.
@@ -57,8 +56,6 @@ impl Overlay {
         // Use the cc.gl (a glow::Context) to create graphics shaders and buffers that you can use
         // for e.g. egui::PaintCallback.
         _cc.egui_ctx.set_visuals(egui::style::Visuals {
-            // panel_fill: egui::Color32::TRANSPARENT,
-            // window_fill: egui::Color32::TRANSPARENT,
             ..Default::default()
         });
 
@@ -105,12 +102,7 @@ impl eframe::App for Overlay {
     }
 
     // TODO: seriously consider preformatting the information on the parse thread
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-
-        // Force maximize the window, for some reason setting in NativeOptions is ignored
-        // Don't in debug though, just so it can be tested in a window better
-        #[cfg(not(debug_assertions))]
-        frame.set_maximized(true);
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
 
         // TODO: maybe don't run this every update?
         ctx.style_mut(|style| {
@@ -128,16 +120,22 @@ impl eframe::App for Overlay {
 
                 // Get window position in egui points
                 // TODO: remove unwrap
-                let window_pos = frame.info().window_info.position.unwrap();
+                let window_pos = ctx.input(|i| i.viewport().inner_rect.unwrap().min);
 
                 // Adjust absolute pointer pos to egui relative position
                 pointer_pos -= window_pos.to_vec2();
+
+                #[cfg(debug_assertions)]
+                if let Some(pos) = ctx.input(|i| i.pointer.latest_pos()) {
+                    // For debugging when the mouse is slightly offset for some reason
+                    log::trace!("pos - pointer_pos = {:?}", pos - pointer_pos);
+                };
                 if ctx.is_pos2_over_area(pointer_pos) {
                     log::trace!("is over area, disabling passthrough");
-                    frame.set_mouse_passthrough(false);
+                    ctx.send_viewport_cmd(ViewportCommand::MousePassthrough(false));
                 } else {
                     log::trace!("enabling passthrough");
-                    frame.set_mouse_passthrough(true);
+                    ctx.send_viewport_cmd(ViewportCommand::MousePassthrough(true));
                 }
             },
             Mouse::Error => log::error!("error getting mouse position"),
@@ -146,7 +144,7 @@ impl eframe::App for Overlay {
         draw_overlay(self, ctx);
 
         if self.closing {
-            frame.close();
+            ctx.send_viewport_cmd(ViewportCommand::Close);
         }
     }
 }
@@ -168,26 +166,38 @@ pub fn draw_overlay(overlay: &mut Overlay, ctx: &egui::Context) {
 
 /// Entrypoint for the main application to spawn the actual overlay window and such
 pub fn spawn_overlay(datalog: Arc<RwLock<DataLog>>) {
+    // Common options to release and debug
+    let viewport = ViewportBuilder::default()
+        .with_transparent(true)
+    ;
+
+    // Release mode options
     #[cfg(not(debug_assertions))]
-    let native_options = eframe::NativeOptions {
-        decorated: false,
-        transparent: true,
-        always_on_top: true,
-        maximized: true,
-        ..Default::default()
+    let viewport = {
+        viewport
+            .with_decorations(false)
+            .with_transparent(true)
+            .with_always_on_top()
+            .with_maximized(true)
+            // Probably unnecessary, but useful to make note of here
+            .with_mouse_passthrough(true)
     };
 
-    // Use a different set of settings in debug mode just for convenience
+    // Debug mode options
+    //  Run in a non-maximized window so it doesn't take up the whole dang screen
     #[cfg(debug_assertions)]
-    let native_options = eframe::NativeOptions {
-        decorated: true, // enable in debug mode just for easy testing
-        transparent: true,
-        always_on_top: true,
-        maximized: false,
-        ..Default::default()
+    let viewport = {
+        viewport
+            .with_decorations(true)
+            .with_transparent(true)
+            // .with_always_on_top()
+            .with_maximized(false)
     };
 
-    // No need to set `mouse_passthrough: true` here, the update() function will take care of that for us
+    let native_options = eframe::NativeOptions {
+        viewport,
+        ..Default::default()
+    };
 
     eframe::run_native("Inkbound Overlay", native_options, Box::new(|c| Box::new(Overlay::new(c, datalog)))).unwrap();
 }
