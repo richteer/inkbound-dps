@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use egui::{Window, Ui};
 use egui_plot::{Plot, BarChart, Bar, Text, PlotPoint};
-use inkbound_parser::parser::{PlayerStats, DataLog};
+use inkbound_parser::parser::{PlayerStats, DataLog, CombatLog};
 
 use crate::{Overlay, class_string_to_color};
 
-use super::show_dive_selection_box;
+use super::{show_dive_selection_box, show_combat_selection_box};
 
 #[derive(Default)]
 pub struct IndividualDamageState {
@@ -34,18 +34,44 @@ pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::C
     if !overlay.options.show_combat_individual_damage {
         return;
     }
-    
-    let player_stats = if let Some(dive) = datalog.dives.get(overlay.window_state.combat_individual_damage.dive) {
-        if let Some(combat) = dive.combats.get(0) {
-            combat.player_stats.player_stats.clone()
+
+    let name = "Combat Individual Damage";
+    Window::new(name).show(ctx, |ui| {
+        show_dive_selection_box(ui, &mut overlay.window_state.combat_group_damage.dive, datalog.dives.len());
+
+        let combats: &Vec<CombatLog> = {
+            if let Some(dive) = datalog.dives.get(overlay.window_state.combat_group_damage.dive) {
+                &dive.combats
+            } else {
+                return // Dive doesn't exist, don't bother continuning
+            }
+        };
+
+        show_combat_selection_box(ui, &mut overlay.window_state.combat_group_damage.combat, combats.len());
+
+        let player_stats = if let Some(combat) = combats.get(overlay.window_state.combat_group_damage.combat) {
+            &combat.player_stats.player_stats
         } else {
-            return;
+            return // No combat, no need to select a player or draw a plot
+        };
+
+        let selection = &mut overlay.window_state.combat_individual_damage.player;
+
+        egui::ComboBox::from_label("Select Player")
+            .selected_text(format!("{}", selection.as_ref().unwrap_or(&"".to_string())))
+            .show_ui(ui, |ui| {
+                for player in player_stats.keys() {
+                    ui.selectable_value(selection, Some(player.clone()), player);
+                }
+            }
+        );
+
+        if let Some(selection) = selection {
+            if let Some(player_stats) = player_stats.get(selection) {
+                draw_individual_damage_plot(ui, player_stats, name);
+            }
         }
-    } else {
-        // Don't bother with the rest if there isn't dive data
-        return;
-    };
-    draw_individual_damage_window(ctx, "Combat Individual Damage", &player_stats, &mut overlay.window_state.combat_individual_damage.player, &mut overlay.window_state.combat_individual_damage.dive, datalog.dives.len());
+    });
 }
 
 /// Draw the window and player selection combo box, chain into plot drawing logic
