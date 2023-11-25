@@ -1,5 +1,5 @@
-use egui::Window;
-use egui_plot::{Plot, Bar, BarChart, AxisHints};
+use egui::{Window, Align2};
+use egui_plot::{Plot, Bar, BarChart, AxisHints, Text, PlotPoint};
 use inkbound_parser::parser::{DataLog, PlayerStats, DiveLog};
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +36,7 @@ pub struct HistoryOptions {
     pub mode: HistoryMode,
     pub group_bar_width: f64,
     pub stacked_bar_width: f64,
+    pub stacked_show_totals: bool,
 }
 
 impl Default for HistoryOptions {
@@ -45,6 +46,7 @@ impl Default for HistoryOptions {
             mode: HistoryMode::default(),
             group_bar_width: 0.90,
             stacked_bar_width: 0.75,
+            stacked_show_totals: false,
         }
     }
 }
@@ -69,8 +71,8 @@ fn generate_split_bars(dive: &DiveLog, bar_group_width: f64) -> Vec<Bar> {
 }
 
 #[inline]
-fn generate_stacked_bars(dive: &DiveLog, bar_width: f64) -> Vec<Bar> {
-    dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
+fn generate_stacked_bars(dive: &DiveLog, bar_width: f64, show_stacked_totals: bool) -> (Vec<Bar>, Option<Vec<Text>>) {
+    let bars = dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
         let mut players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
         players.sort_by_key(|p| p.total_damage_dealt);
         players.iter().scan(0, |state, p| {
@@ -83,7 +85,22 @@ fn generate_stacked_bars(dive: &DiveLog, bar_width: f64) -> Vec<Bar> {
                 .width(bar_width)
                 .fill(class_string_to_color(p.player_data.class.as_str()))
         }).collect::<Vec<Bar>>()
-    }).flatten().collect()
+    }).flatten().collect();
+
+    // TODO: This totally can be done in one pass with the previous
+    let texts = if show_stacked_totals {
+        Some(dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
+            let total_damage_dealt = combat.player_stats.player_stats.values().fold(0, |acc, elem| acc + elem.total_damage_dealt);
+            Text::new(
+                PlotPoint { x: combat_index as f64 + 1.0, y: total_damage_dealt as f64 },
+                format!("{}", total_damage_dealt)
+            ).anchor(Align2::CENTER_BOTTOM)
+        }).collect())
+    } else {
+            None
+    };
+
+    (bars, texts)
 }
 
 
@@ -112,6 +129,7 @@ pub fn draw_history_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: 
                 ui.add(egui::Slider::new(&mut overlay.options.history.stacked_bar_width, 0.25..=1.0)
                     .max_decimals(2)
                     .text("Bar Width"));
+                ui.checkbox(&mut overlay.options.history.stacked_show_totals, "Show Totals");
             },
         }
 
@@ -123,9 +141,9 @@ pub fn draw_history_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: 
             return
         };
 
-        let bars = match overlay.options.history.mode {
-            HistoryMode::Split => generate_split_bars(dive, overlay.options.history.group_bar_width),
-            HistoryMode::Stacked => generate_stacked_bars(dive, overlay.options.history.stacked_bar_width),
+        let (bars, texts) = match overlay.options.history.mode {
+            HistoryMode::Split => (generate_split_bars(dive, overlay.options.history.group_bar_width), None),
+            HistoryMode::Stacked => generate_stacked_bars(dive, overlay.options.history.stacked_bar_width, overlay.options.history.stacked_show_totals),
         };
 
         let chart = BarChart::new(bars);
@@ -145,7 +163,7 @@ pub fn draw_history_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: 
                     format!("{value}")
                 }
             })])
-            .set_margin_fraction(egui::Vec2 { x: 0.0, y: 0.1 })
+            .set_margin_fraction(egui::Vec2 { x: 0.1, y: 0.1 })
             .show_grid(true)
             .show_axes(true)
             .show_background(false)
@@ -155,6 +173,11 @@ pub fn draw_history_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: 
             .y_axis_label("Damage")
             .show(ui, |plot_ui| {
                 plot_ui.bar_chart(chart);
+                if let Some(texts) = texts {
+                    for text in texts {
+                        plot_ui.text(text);
+                    }
+                }
             });
             
     });
