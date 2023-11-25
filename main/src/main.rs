@@ -154,7 +154,7 @@ fn main() {
     let mut watcher = notify::PollWatcher::new(tx, notify::Config::default().with_poll_interval(Duration::from_secs(2))).unwrap();
     watcher.watch(Path::new(filepath.as_str()), RecursiveMode::NonRecursive).unwrap();
 
-    parser_overlay::spawn_overlay(datalog);
+    overlay::spawn_overlay(datalog);
 
     // Overlay closed, exit and clean-up
     drop(watcher); // Drop to close the watch recv thread loop

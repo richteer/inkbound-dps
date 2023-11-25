@@ -3,7 +3,7 @@ resolver = "2"
 members = [
   "main",
   "inkbound-parser",
-  "parser-overlay",
+  "overlay",
 ]
 
 [workspace.dependencies]
