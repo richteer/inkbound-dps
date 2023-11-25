@@ -25,3 +25,13 @@ pub fn show_dive_selection_box(ui: &mut egui::Ui, dive_state: &mut usize, num_di
             }
         });
 }
+
+pub fn show_combat_selection_box(ui: &mut egui::Ui, combat_state: &mut usize, num_combats: usize) {
+    egui::ComboBox::from_label("Select Combat")
+        .selected_text(inverted_number_label(*combat_state, num_combats))
+        .show_ui(ui, |ui| {
+            for dive in 0..num_combats {
+                ui.selectable_value(combat_state, dive, inverted_number_label(dive, num_combats));
+            }
+        });
+}
