@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"] // Hide terminal on windows
 use clap::{command, arg};
 use inkbound_parser::{
     parser::{*},
