@@ -58,13 +58,14 @@ fn generate_split_bars(dive: &DiveLog, bar_group_width: f64) -> Vec<Bar> {
         let mut players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
         players.sort_by(|a,b| a.player_data.name.cmp(&b.player_data.name) );
         players.iter().enumerate().map(|(pind, p)| {
+            let pind = pind as f64;
             let num_players = combat.player_stats.player_stats.len() as f64;
-            let width = bar_group_width / num_players as f64;
-            // TODO: bar_group_width/2 isn't entirely the right size here, but its close enough. Consider fixing?
-            let x_offset = ((pind as f64 + bar_group_width / 2.0) as f64 * width) - bar_group_width / 2.0;
+            let bar_width = bar_group_width / num_players;
+            // let x_offset = ((pind + bar_group_width / 2.0) * width) - (bar_group_width / 2.0);
+            let x_offset = pind * bar_width - ((bar_group_width - bar_width) / 2.0);
             Bar::new(combat_index as f64 + x_offset + 1.0, p.total_damage_dealt as f64)
                 .name(format!("{} {}", p.player_data.name, combat_index + 1))
-                .width(width as f64)
+                .width(bar_width as f64)
                 .fill(class_string_to_color(p.player_data.class.as_str()))
         }).collect::<Vec<Bar>>()
     }).flatten().collect()
