@@ -49,7 +49,6 @@ pub struct Overlay {
     pub datalog: Arc<RwLock<DataLog>>,
     pub window_state: WindowState,
     pub options: OverlayOptions,
-    pub closing: bool,
 }
 
 
@@ -88,7 +87,6 @@ impl Overlay {
             // TODO: probably persist this information
             window_state: WindowState::default(),
             options,
-            closing: false,
         }
     }
 }
@@ -146,10 +144,6 @@ impl eframe::App for Overlay {
         }
 
         draw_overlay(self, ctx);
-
-        if self.closing {
-            ctx.send_viewport_cmd(ViewportCommand::Close);
-        }
     }
 }
 

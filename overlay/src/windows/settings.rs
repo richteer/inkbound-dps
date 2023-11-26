@@ -31,7 +31,7 @@ pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
 
             ui.separator();
             if ui.button("Close Overlay").clicked() {
-                overlay.closing = true;
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
         }
     );
