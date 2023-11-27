@@ -28,6 +28,12 @@ pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
             }).response.on_hover_text("Enter a player name to set as the default if no player is selected in an individual damage window.\n\nYou probably want to set this to your in-game character name.");
             ui.add(egui::Slider::new(&mut overlay.options.plot_font_size, 4.0..=32.0).text("Plot font size"))
                 .on_hover_text("Set the font size for the damage plot labels.");
+            ui.checkbox(&mut overlay.options.show_crit_bars, "Show Crit Bars")
+                .on_hover_text("Show what portion of a skill's damage was done via critical hits.\n\nThis will appear as a darker portion of a skill's damage bar in individual damage windows.");
+            if overlay.options.show_crit_bars {
+                ui.add(egui::Slider::new(&mut overlay.options.crit_bar_opacity, 1..=255).text("Crit Bar Opacity"))
+                    .on_hover_text("Set the opacity of the overlain crit bar.");
+            }
 
             ui.separator();
             if ui.button("Close Overlay").clicked() {

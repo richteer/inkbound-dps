@@ -27,6 +27,8 @@ pub struct OverlayOptions {
     pub history: windows::HistoryOptions,
     pub default_player_name: String,
     pub plot_font_size: f32,
+    pub show_crit_bars: bool,
+    pub crit_bar_opacity: u8,
 }
 
 // TODO: consider using a crate to make this whole impl not necessary
@@ -40,6 +42,8 @@ impl Default for OverlayOptions {
             history: windows::HistoryOptions::default(),
             default_player_name: "".to_string(),
             plot_font_size: 14.0,
+            show_crit_bars: false,
+            crit_bar_opacity: 128,
         }
     }
 }
