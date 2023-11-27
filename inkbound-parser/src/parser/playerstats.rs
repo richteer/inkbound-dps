@@ -12,6 +12,8 @@ pub struct PlayerStats {
     pub total_damage_dealt: i64,
     pub total_damage_received: i64,
     pub skill_totals: HashMap<String, i64>,
+    // Subset of skill_totals that only contains crit damage
+    pub crit_totals: HashMap<String, i64>,
     // TODO: status effects applied, etc
 }
 
@@ -24,14 +26,16 @@ impl PlayerStats {
             total_damage_dealt: 0,
             total_damage_received: 0,
             skill_totals: HashMap::new(),
+            crit_totals: HashMap::new(),
         }
     }
 
     pub fn apply_dealt_damage(&mut self, dmg: DamageDealtEventData) {
-        if self.skill_totals.contains_key(&dmg.ability) {
-            *self.skill_totals.get_mut(&dmg.ability).unwrap() += dmg.amount;
-        } else {
-            self.skill_totals.insert(dmg.ability, dmg.amount);
+        // I don't love the clone here, but it at least prevents the bleh if/else
+        self.skill_totals.entry(dmg.ability.clone()).and_modify(|total| *total += dmg.amount).or_insert(dmg.amount);
+
+        if dmg.crit {
+            self.crit_totals.entry(dmg.ability).and_modify(|total| *total += dmg.amount).or_insert(dmg.amount);
         }
         
         self.total_damage_dealt += dmg.amount;
