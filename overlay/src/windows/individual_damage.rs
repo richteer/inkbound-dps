@@ -113,7 +113,13 @@ fn draw_individual_damage_plot(ui: &mut Ui, player_stats: &PlayerStats, name: &s
     
     // let mut skill_totals: Vec<(String, i64)> = player_stats.skill_totals.clone().into_iter().collect();
     let mut skill_totals: Vec<(String, (i64, i64))> = skill_totals.into_iter().collect();
-    skill_totals.sort_by_key(|e| e.1);
+    skill_totals.sort_by(|a,b| {
+        let res = a.1.0.cmp(&b.1.0);
+        match res {
+            std::cmp::Ordering::Equal => a.0.cmp(&b.0),
+            _ => res,
+        }
+    });
 
     let bars = if overlay.options.show_crit_bars {
         skill_totals.iter().enumerate().map(|(index, (_, (dmg, crit)))| {
