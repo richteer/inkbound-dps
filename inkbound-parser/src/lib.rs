@@ -1,4 +1,5 @@
 pub mod parser;
+pub mod aspects;
 
 pub fn parse_log_to_json(path: &String) -> String {
     let mut log_parser = crate::parser::LogParser::new();

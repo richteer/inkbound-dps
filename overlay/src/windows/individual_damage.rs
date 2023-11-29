@@ -126,7 +126,7 @@ fn draw_individual_damage_plot(ui: &mut Ui, player_stats: &PlayerStats, name: &s
             [
                 Bar::new(index as f64, *dmg as f64)
                     .width(1.0)
-                    .fill(class_string_to_color(player_stats.player_data.class.as_str()))
+                    .fill(class_string_to_color(player_stats.player_data.class.to_string().as_str()))
                 ,
                 Bar::new(index as f64, *crit as f64)
                     .width(1.0)
@@ -137,7 +137,7 @@ fn draw_individual_damage_plot(ui: &mut Ui, player_stats: &PlayerStats, name: &s
         skill_totals.iter().enumerate().map(|(index, (_, (dmg, _crit)))| {
             Bar::new(index as f64, *dmg as f64)
                 .width(1.0)
-                .fill(class_string_to_color(player_stats.player_data.class.as_str()))
+                .fill(class_string_to_color(player_stats.player_data.class.to_string().as_str()))
         }).collect()
     };
 

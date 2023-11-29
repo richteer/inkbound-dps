@@ -75,7 +75,7 @@ fn draw_group_damage_plot(ui: &mut Ui, mut statlist: Vec<PlayerStats>, name: &st
         statlist.iter().enumerate().map(|(index, stats)| 
             Bar::new(index as f64, stats.total_damage_dealt as f64)
                 .width(1.0)
-                .fill(class_string_to_color(stats.player_data.class.as_str()))
+                .fill(class_string_to_color(stats.player_data.class.to_string().as_str()))
         ).collect()
     };
     let texts: Vec<Text> = {

@@ -8,6 +8,8 @@ mod loggers;
 pub use loggers::*;
 use serde::Serialize;
 
+use crate::aspects::Aspect;
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum Entity {
     Id(i64),
@@ -17,7 +19,7 @@ pub enum Entity {
 #[derive(PartialEq, Debug, Clone, Serialize)]
 pub struct PlayerData {
     pub name: String,
-    pub class: String,
+    pub class: Aspect,
     pub id: i64,
 }
 
@@ -98,19 +100,4 @@ pub enum Event {
     // RegisterPlayer(String, String, String),
     NextTurn(String),
     // Unknown(String),
-}
-
-pub fn class_id_to_string(id: &str) -> String {
-    match id {
-        "C01" => "Magma Miner",
-        "C02" => "Mosscloak",
-        "C03" => "Clairvoyant",
-        "C04" => "Weaver",
-        "C05" => "Obelisk",
-        "C06" => "Unknown",
-        "C07" => "Star Captain",
-        "C08" => "Chainbreaker",
-        "C09" => "Godkeeper",
-        _ => id,
-    }.to_string()
 }

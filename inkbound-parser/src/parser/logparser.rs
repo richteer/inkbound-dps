@@ -4,12 +4,14 @@ use lazy_regex::*;
 use log::*;
 use serde::Serialize;
 
-use super::{Event, DamageEventData, Entity, class_id_to_string, PlayerData, DamageDirection};
+use crate::aspects::Aspect;
+
+use super::{Event, DamageEventData, Entity, PlayerData, DamageDirection};
 
 #[derive(Debug, Serialize)]
 pub struct LogParser {
     players: HashMap<i64, String>, // id -> name
-    classes: HashMap<i64, String>, // id -> pre-translated class string
+    classes: HashMap<i64, Aspect>, // id -> pre-translated Aspect
 }
 
 #[derive(Debug)]
@@ -28,11 +30,11 @@ enum ParseEvent {
 }
 
 trait IdToPlayer {
-    fn to_player(self, players: &HashMap<i64, String>, classes: &HashMap<i64, String>) -> Self;
+    fn to_player(self, players: &HashMap<i64, String>, classes: &HashMap<i64, Aspect>) -> Self;
 }
 
 impl IdToPlayer for Entity {
-    fn to_player(self, players: &HashMap<i64, String>, classes: &HashMap<i64, String>) -> Self {
+    fn to_player(self, players: &HashMap<i64, String>, classes: &HashMap<i64, Aspect>) -> Self {
         match self {
             Entity::Player(_) => self,
             Entity::Id(id) => {
@@ -46,7 +48,7 @@ impl IdToPlayer for Entity {
                 let class = if let Some(class) = classes.get(&id) {
                     class.clone()
                 } else {
-                    id.to_string()
+                    Aspect::Unknown(id.to_string())
                 };
                 Entity::Player(
                     PlayerData {
@@ -127,7 +129,7 @@ impl LogParser {
             }
             // Register the EntityId -> Class mapping first, return the information RegisterPlayer when name is received
             ParseEvent::Internal(InternalEvent::UnitClass(_, id, class_id)) => {
-                self.classes.insert(id, class_id_to_string(&class_id));
+                self.classes.insert(id, Aspect::from_id(&class_id));
                 None
             },
             ParseEvent::Internal(InternalEvent::EndDive(line)) => {
