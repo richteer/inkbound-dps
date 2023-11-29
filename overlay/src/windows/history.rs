@@ -3,7 +3,7 @@ use egui_plot::{Plot, Bar, BarChart, AxisHints, Text, PlotPoint};
 use inkbound_parser::parser::{DataLog, PlayerStats, DiveLog};
 use serde::{Deserialize, Serialize};
 
-use crate::{Overlay, class_string_to_color};
+use crate::{Overlay, DefaultColor};
 
 use super::show_dive_selection_box;
 
@@ -66,7 +66,7 @@ fn generate_split_bars(dive: &DiveLog, bar_group_width: f64) -> Vec<Bar> {
             Bar::new(combat_index as f64 + x_offset + 1.0, p.total_damage_dealt as f64)
                 .name(format!("{} {}", p.player_data.name, combat_index + 1))
                 .width(bar_width as f64)
-                .fill(class_string_to_color(p.player_data.class.to_string().as_str()))
+                .fill(p.player_data.class.default_color())
         }).collect::<Vec<Bar>>()
     }).flatten().collect()
 }
@@ -84,7 +84,7 @@ fn generate_stacked_bars(dive: &DiveLog, bar_width: f64, show_stacked_totals: bo
                 .name(format!("{} {}", p.player_data.name, combat_index + 1))
                 .base_offset((previous - p.total_damage_dealt) as f64)
                 .width(bar_width)
-                .fill(class_string_to_color(p.player_data.class.to_string().as_str()))
+                .fill(p.player_data.class.default_color())
         }).collect::<Vec<Bar>>()
     }).flatten().collect();
 

@@ -4,20 +4,27 @@ pub use overlay::*;
 mod options;
 pub use options::OverlayOptions;
 
-// TODO: Make this configurable and save to layout state
-fn class_string_to_color(class_name: &str) -> egui::Color32 {
-    // TODO: use a complete lookup table so this only needs to be updated in one place
-    match class_name {
-        "Magma Miner"  => egui::Color32::from_rgb(184, 67, 0),
-        "Mosscloak"    => egui::Color32::from_rgb(76, 142, 33),
-        "Clairvoyant"  => egui::Color32::from_rgb(194, 66, 66),
-        "Weaver"       => egui::Color32::from_rgb(151, 30, 167),
-        "Obelisk"      => egui::Color32::from_rgb(55, 147, 147),
-        "Star Captain" => egui::Color32::from_rgb(188, 150, 53),
-        "Chainbreaker" => egui::Color32::from_rgb(137, 26, 37),
-        "Godkeeper"    => egui::Color32::from_rgb(213, 123, 22),
-        _ => egui::Color32::DARK_GRAY,
-    }
+use inkbound_parser::aspects::Aspect;
+
+trait DefaultColor {
+    fn default_color(&self) -> egui::Color32;
 }
 
-
+// Out of scope for the parser, so plopping it here
+impl DefaultColor for Aspect {
+    /// Get the default color for a given aspect
+    fn default_color(&self) -> egui::Color32 {
+        use egui::Color32;
+        match self {
+            Aspect::MagmaMiner   => Color32::from_rgb(184, 67, 0),
+            Aspect::Mosscloak    => Color32::from_rgb(76, 142, 33),
+            Aspect::Clairvoyant  => Color32::from_rgb(194, 66, 66),
+            Aspect::Weaver       => Color32::from_rgb(151, 30, 167),
+            Aspect::Obelisk      => Color32::from_rgb(55, 147, 147),
+            Aspect::StarCaptain  => Color32::from_rgb(188, 150, 53),
+            Aspect::Chainbreaker => Color32::from_rgb(137, 26, 37),
+            Aspect::Godkeeper    => Color32::from_rgb(213, 123, 22),
+            Aspect::Unknown(_)   => Color32::DARK_GRAY,
+        }
+    }
+}
