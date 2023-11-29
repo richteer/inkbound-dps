@@ -8,14 +8,14 @@ pub use options::OverlayOptions;
 fn class_string_to_color(class_name: &str) -> egui::Color32 {
     // TODO: use a complete lookup table so this only needs to be updated in one place
     match class_name {
-        "Magma Miner"  => egui::Color32::from_rgb(196, 75, 0),
-        "Mosscloak"    => egui::Color32::from_rgb(0, 130, 13),
-        "Clairvoyant"  => egui::Color32::from_rgb(130, 0, 0),
-        "Weaver"       => egui::Color32::from_rgb(173, 148, 0),
-        "Obelisk"      => egui::Color32::from_rgb(128, 128, 128),
-        "Star Captain" => egui::Color32::from_rgb(0, 119, 140),
-        "Chainbreaker" => egui::Color32::from_rgb(107, 0, 52),
-        "Godseeker" => egui::Color32::from_rgb(150, 131, 2),
+        "Magma Miner"  => egui::Color32::from_rgb(184, 67, 0),
+        "Mosscloak"    => egui::Color32::from_rgb(76, 142, 33),
+        "Clairvoyant"  => egui::Color32::from_rgb(194, 66, 66),
+        "Weaver"       => egui::Color32::from_rgb(151, 30, 167),
+        "Obelisk"      => egui::Color32::from_rgb(55, 147, 147),
+        "Star Captain" => egui::Color32::from_rgb(188, 150, 53),
+        "Chainbreaker" => egui::Color32::from_rgb(137, 26, 37),
+        "Godkeeper"    => egui::Color32::from_rgb(213, 123, 22),
         _ => egui::Color32::DARK_GRAY,
     }
 }
