@@ -1,6 +1,8 @@
 mod windows;
 mod overlay;
 pub use overlay::*;
+mod options;
+pub use options::OverlayOptions;
 
 // TODO: Make this configurable and save to layout state
 fn class_string_to_color(class_name: &str) -> egui::Color32 {
