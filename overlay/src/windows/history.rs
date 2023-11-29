@@ -3,7 +3,7 @@ use egui_plot::{Plot, Bar, BarChart, AxisHints, Text, PlotPoint};
 use inkbound_parser::parser::{DataLog, PlayerStats, DiveLog};
 use serde::{Deserialize, Serialize};
 
-use crate::{Overlay, DefaultColor};
+use crate::{Overlay, options::ColorOptions};
 
 use super::show_dive_selection_box;
 
@@ -53,7 +53,7 @@ impl Default for HistoryOptions {
 
 
 #[inline]
-fn generate_split_bars(dive: &DiveLog, bar_group_width: f64) -> Vec<Bar> {
+fn generate_split_bars(dive: &DiveLog, bar_group_width: f64, colors: &ColorOptions) -> Vec<Bar> {
     dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
         let mut players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
         players.sort_by(|a,b| a.player_data.name.cmp(&b.player_data.name) );
@@ -66,13 +66,13 @@ fn generate_split_bars(dive: &DiveLog, bar_group_width: f64) -> Vec<Bar> {
             Bar::new(combat_index as f64 + x_offset + 1.0, p.total_damage_dealt as f64)
                 .name(format!("{} {}", p.player_data.name, combat_index + 1))
                 .width(bar_width as f64)
-                .fill(p.player_data.class.default_color())
+                .fill(colors.get_aspect_color(&p.player_data.class))
         }).collect::<Vec<Bar>>()
     }).flatten().collect()
 }
 
 #[inline]
-fn generate_stacked_bars(dive: &DiveLog, bar_width: f64, show_stacked_totals: bool) -> (Vec<Bar>, Option<Vec<Text>>) {
+fn generate_stacked_bars(dive: &DiveLog, bar_width: f64, show_stacked_totals: bool, colors: &ColorOptions) -> (Vec<Bar>, Option<Vec<Text>>) {
     let bars = dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
         let mut players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
         players.sort_by_key(|p| p.total_damage_dealt);
@@ -84,7 +84,7 @@ fn generate_stacked_bars(dive: &DiveLog, bar_width: f64, show_stacked_totals: bo
                 .name(format!("{} {}", p.player_data.name, combat_index + 1))
                 .base_offset((previous - p.total_damage_dealt) as f64)
                 .width(bar_width)
-                .fill(p.player_data.class.default_color())
+                .fill(colors.get_aspect_color(&p.player_data.class))
         }).collect::<Vec<Bar>>()
     }).flatten().collect();
 
@@ -143,8 +143,8 @@ pub fn draw_history_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: 
         };
 
         let (bars, texts) = match overlay.options.history.mode {
-            HistoryMode::Split => (generate_split_bars(dive, overlay.options.history.group_bar_width), None),
-            HistoryMode::Stacked => generate_stacked_bars(dive, overlay.options.history.stacked_bar_width, overlay.options.history.stacked_show_totals),
+            HistoryMode::Split => (generate_split_bars(dive, overlay.options.history.group_bar_width, &overlay.options.colors), None),
+            HistoryMode::Stacked => generate_stacked_bars(dive, overlay.options.history.stacked_bar_width, overlay.options.history.stacked_show_totals, &overlay.options.colors),
         };
 
         let chart = BarChart::new(bars);

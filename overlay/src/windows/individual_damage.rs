@@ -4,7 +4,7 @@ use egui::{Window, Ui};
 use egui_plot::{Plot, BarChart, Bar, Text, PlotPoint};
 use inkbound_parser::parser::{PlayerStats, DataLog, CombatLog};
 
-use crate::{Overlay, DefaultColor};
+use crate::Overlay;
 
 use super::{show_dive_selection_box, show_combat_selection_box};
 
@@ -121,12 +121,13 @@ fn draw_individual_damage_plot(ui: &mut Ui, player_stats: &PlayerStats, name: &s
         }
     });
 
-    let bars = if overlay.options.show_crit_bars {
+    let bar_color = overlay.options.colors.get_aspect_color(&player_stats.player_data.class);
+        let bars = if overlay.options.show_crit_bars {
         skill_totals.iter().enumerate().map(|(index, (_, (dmg, crit)))| {
             [
                 Bar::new(index as f64, *dmg as f64)
                     .width(1.0)
-                    .fill(player_stats.player_data.class.default_color())
+                    .fill(bar_color)
                 ,
                 Bar::new(index as f64, *crit as f64)
                     .width(1.0)
@@ -137,7 +138,7 @@ fn draw_individual_damage_plot(ui: &mut Ui, player_stats: &PlayerStats, name: &s
         skill_totals.iter().enumerate().map(|(index, (_, (dmg, _crit)))| {
             Bar::new(index as f64, *dmg as f64)
                 .width(1.0)
-                .fill(player_stats.player_data.class.default_color())
+                .fill(bar_color)
         }).collect()
     };
 

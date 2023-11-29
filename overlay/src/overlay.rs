@@ -13,6 +13,7 @@ pub struct WindowState {
     pub combat_group_damage: windows::GroupDamageState,
     pub dive_individual_damage: windows::IndividualDamageState,
     pub combat_individual_damage: windows::IndividualDamageState,
+    pub color_settings: windows::ColorSettingsState,
     pub history: windows::HistoryState,
 }
 
@@ -53,10 +54,12 @@ impl Overlay {
             OverlayOptions::default()
         };
 
+        let mut window_state = WindowState::default();
+        window_state.color_settings.sync_from_options(&options);
+
         Self {
             datalog,
-            // TODO: probably persist this information
-            window_state: WindowState::default(),
+            window_state,
             options,
         }
     }

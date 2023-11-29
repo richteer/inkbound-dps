@@ -2,7 +2,7 @@ use egui::{Ui, Window};
 use egui_plot::{Text, PlotPoint, BarChart, Plot, Bar};
 use inkbound_parser::parser::{PlayerStats, DataLog, CombatLog};
 
-use crate::{Overlay, DefaultColor};
+use crate::Overlay;
 
 use super::{show_dive_selection_box, show_combat_selection_box};
 
@@ -38,7 +38,7 @@ pub fn draw_combat_damage_window(overlay: &mut Overlay, ctx: &egui::Context, dat
             Vec::new()
         };
 
-        draw_group_damage_plot(ui, statlist, name);
+        draw_group_damage_plot(ui, overlay, statlist, name);
     });
 }
 
@@ -60,13 +60,13 @@ pub fn draw_dive_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datal
             }
         };
 
-        draw_group_damage_plot(ui, statlist, name);
+        draw_group_damage_plot(ui, overlay, statlist, name);
     });
 }
 
 /// Helper to draw the plot for group damage stats
 #[inline]
-fn draw_group_damage_plot(ui: &mut Ui, mut statlist: Vec<PlayerStats>, name: &str) {
+fn draw_group_damage_plot(ui: &mut Ui, overlay: &Overlay, mut statlist: Vec<PlayerStats>, name: &str) {
     // TODO: Precalculate this in the DiveLog probably
     let party_damage = statlist.iter().fold(0, |acc, player| acc + player.total_damage_dealt) as f64;
     
@@ -75,7 +75,7 @@ fn draw_group_damage_plot(ui: &mut Ui, mut statlist: Vec<PlayerStats>, name: &st
         statlist.iter().enumerate().map(|(index, stats)| 
             Bar::new(index as f64, stats.total_damage_dealt as f64)
                 .width(1.0)
-                .fill(stats.player_data.class.default_color())
+                .fill(overlay.options.colors.get_aspect_color(&stats.player_data.class))
         ).collect()
     };
     let texts: Vec<Text> = {

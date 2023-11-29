@@ -1,9 +1,10 @@
 use serde::{Serialize, Deserialize};
+use strum::EnumIter;
 
 // TODO: Consider manually implementing (De)Serialize
 //  May be more future proofed to not use a named string in a logfile,
 //  and letting clients handle sorting that part out.
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone, EnumIter, Hash, Ord, PartialOrd)]
 pub enum Aspect {
     MagmaMiner,
     Mosscloak,
