@@ -8,9 +8,9 @@ use strum::EnumIter;
 pub enum Aspect {
     MagmaMiner,
     Mosscloak,
-    Clairvoyant,
     Weaver,
     Obelisk,
+    Clairvoyant,
     StarCaptain,
     Chainbreaker,
     Godkeeper,
