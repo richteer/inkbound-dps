@@ -138,10 +138,22 @@ fn main() {
     let mut reader = LogReader::new(filepath.as_str());
 
     // Catch the parser/log up...
-    if !matches.get_one("skip-current").unwrap_or(&false) {
-        reader.reader_to_datalog(&parser, &datalog);
-    } else {
-        reader.seek_end();
+    let (backlog_tx, backlog_rx) = std::sync::mpsc::channel();
+    {
+        let datalog = datalog.clone();
+        let parser = parser.clone();
+        let skip = *matches.get_one("skip-current").unwrap_or(&false);
+
+        std::thread::spawn(move || {
+            if skip {
+                log::debug!("skipping backlog");
+                reader.seek_end();
+            } else {
+                log::debug!("reading from backlog");
+                reader.reader_to_datalog(&parser, &datalog);
+            }
+            backlog_tx.send(reader).unwrap();
+        });
     }
 
     let (tx, rx) = std::sync::mpsc::channel();
@@ -151,6 +163,11 @@ fn main() {
         let parser = parser.clone();
         let datalog = datalog.clone();
         std::thread::spawn(move || {
+            log::debug!("waiting to receive reader from backlog thread...");
+            let mut reader = backlog_rx.recv().unwrap();
+            drop(backlog_rx);
+            log::debug!("received reader");
+
             log::debug!("spawning watcher receive thread");
             loop {
                 match rx.recv() {
