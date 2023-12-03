@@ -2,6 +2,7 @@ use egui::{Window, Align2};
 use egui_plot::{Plot, Bar, BarChart, AxisHints, Text, PlotPoint};
 use inkbound_parser::parser::{DataLog, PlayerStats, DiveLog};
 use serde::{Deserialize, Serialize};
+use strum::{IntoEnumIterator, EnumIter};
 
 use crate::{Overlay, options::ColorOptions};
 
@@ -29,12 +30,33 @@ pub struct HistoryState {
     pub dive: usize,
 }
 
+#[derive(Default, Serialize, Deserialize, EnumIter, PartialEq, Eq, Clone, Copy)]
+pub enum BarOrder {
+    AscendingDamage,
+    #[default]
+    DescendingDamage,
+    AscendingName,
+    DescendingName,
+}
+
+impl std::fmt::Display for BarOrder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            BarOrder::AscendingDamage  => "Damage ⬆",
+            BarOrder::DescendingDamage => "Damage ⬇",
+            BarOrder::AscendingName    => "Name ⬆",
+            BarOrder::DescendingName   => "Name ⬇",
+        })
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
 pub struct HistoryOptions {
     pub show: bool,
     pub mode: HistoryMode,
     pub group_bar_width: f64,
+    pub bar_order: BarOrder,
     pub stacked_bar_width: f64,
     pub stacked_show_totals: bool,
 }
@@ -47,16 +69,28 @@ impl Default for HistoryOptions {
             group_bar_width: 0.90,
             stacked_bar_width: 0.75,
             stacked_show_totals: false,
+            bar_order: BarOrder::default(),
         }
     }
 }
 
+// TODO: Consider passing in a sort function to the generate functions, or just passing in pre-sorted data
+fn sort_players(mut players: Vec<PlayerStats>, sorting: BarOrder) -> Vec<PlayerStats> {
+    match sorting {
+        BarOrder::AscendingDamage  => players.sort_by_key(|p| p.total_damage_dealt),
+        BarOrder::DescendingDamage => players.sort_by_key(|p| std::cmp::Reverse(p.total_damage_dealt)),
+        BarOrder::AscendingName    => players.sort_by(|a,b| a.player_data.name.to_lowercase().cmp(&b.player_data.name.to_lowercase())),
+        BarOrder::DescendingName   => players.sort_by(|a,b| b.player_data.name.to_lowercase().cmp(&a.player_data.name.to_lowercase())),
+    };
+
+    players
+}
 
 #[inline]
-fn generate_split_bars(dive: &DiveLog, bar_group_width: f64, colors: &ColorOptions) -> Vec<Bar> {
+fn generate_split_bars(dive: &DiveLog, bar_group_width: f64, colors: &ColorOptions, sorting: BarOrder) -> Vec<Bar> {
     dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
-        let mut players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
-        players.sort_by(|a,b| a.player_data.name.cmp(&b.player_data.name) );
+        let players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
+        let players = sort_players(players, sorting);
         players.iter().enumerate().map(|(pind, p)| {
             let pind = pind as f64;
             let num_players = combat.player_stats.player_stats.len() as f64;
@@ -72,10 +106,10 @@ fn generate_split_bars(dive: &DiveLog, bar_group_width: f64, colors: &ColorOptio
 }
 
 #[inline]
-fn generate_stacked_bars(dive: &DiveLog, bar_width: f64, show_stacked_totals: bool, colors: &ColorOptions) -> (Vec<Bar>, Option<Vec<Text>>) {
+fn generate_stacked_bars(dive: &DiveLog, bar_width: f64, show_stacked_totals: bool, colors: &ColorOptions, sorting: BarOrder) -> (Vec<Bar>, Option<Vec<Text>>) {
     let bars = dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
-        let mut players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
-        players.sort_by_key(|p| p.total_damage_dealt);
+        let players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
+        let players = sort_players(players, sorting);
         players.iter().scan(0, |state, p| {
             *state += p.total_damage_dealt;
             Some((*state,  p))
@@ -120,6 +154,12 @@ pub fn draw_history_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: 
             })
             .response.on_hover_text("Select which mode to render the history plot.\n\nSplit - Each player has their own vertical bar grouped by combat.\nStacked - Player damage bars are stacked on top of each other, with the total length of the bar representing total group damage.");
 
+        egui::ComboBox::from_label("Bar Order")
+            .selected_text(overlay.options.history.bar_order.to_string())
+            .show_ui(ui, |ui|{
+                BarOrder::iter().for_each(|e| { ui.selectable_value(&mut overlay.options.history.bar_order, e, e.to_string()); })
+            }).response.on_hover_text("The order that the bars will be rendered.\n\nIn split mode, ascending(⬆) is left to right.\nIn stacked mode, ascending(⬆) is bottom-up.");
+
         match overlay.options.history.mode {
             HistoryMode::Split => {
                 ui.add(egui::Slider::new(&mut overlay.options.history.group_bar_width, 0.25..=1.0)
@@ -143,8 +183,8 @@ pub fn draw_history_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: 
         };
 
         let (bars, texts) = match overlay.options.history.mode {
-            HistoryMode::Split => (generate_split_bars(dive, overlay.options.history.group_bar_width, &overlay.options.colors), None),
-            HistoryMode::Stacked => generate_stacked_bars(dive, overlay.options.history.stacked_bar_width, overlay.options.history.stacked_show_totals, &overlay.options.colors),
+            HistoryMode::Split => (generate_split_bars(dive, overlay.options.history.group_bar_width, &overlay.options.colors, overlay.options.history.bar_order), None),
+            HistoryMode::Stacked => generate_stacked_bars(dive, overlay.options.history.stacked_bar_width, overlay.options.history.stacked_show_totals, &overlay.options.colors, overlay.options.history.bar_order),
         };
 
         let chart = BarChart::new(bars);
