@@ -14,8 +14,8 @@ serde = { version = "1.0.190", features = ["derive"] }
 strum = { version = "0.25.0", features = ["derive"] }
 
 [patch.crates-io]
-egui = { git = "https://github.com/richteer/egui", branch = "eframe-overlay-0.24.0" }
-eframe = { git = "https://github.com/richteer/egui", branch = "eframe-overlay-0.24.0" }
+egui = { git = "https://github.com/richteer/egui", branch = "eframe-overlay-0.24.1" }
+eframe = { git = "https://github.com/richteer/egui", branch = "eframe-overlay-0.24.1" }
 
 ## Uncomment to use a local development egui
 # egui = { path = "../egui/crates/egui" }
