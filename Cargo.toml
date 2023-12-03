@@ -4,6 +4,7 @@ members = [
   "main",
   "inkbound-parser",
   "overlay",
+  "updater",
 ]
 
 [workspace.dependencies]

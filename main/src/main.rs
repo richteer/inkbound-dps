@@ -96,7 +96,30 @@ fn main() {
             .required(false)
             .action(clap::ArgAction::SetTrue)
         )
+        .arg(arg!(--update "Run self-updater and exit")
+            .required(false)
+            .action(clap::ArgAction::SetTrue)
+        )
         .get_matches();
+
+    // Initialize Updater
+    {
+        let mut updater = updater::UPDATER.lock().unwrap();
+        updater.init(env!("CARGO_PKG_VERSION").to_string());
+
+        if *matches.get_one("update").unwrap_or(&false) {
+            log::debug!("current version = {}", updater.current_version);
+            updater.set_options(updater::UpdaterOptions::default().show_download_progress(true));
+
+            updater.do_update(true);
+
+            if let updater::UpdateStatus::Error(e) = &*updater.status.lock().unwrap() {
+                log::error!("Error updating: {e}");
+            }
+
+            return
+        }
+    }
 
     // Parse-only mode
     if let Some(file) = matches.get_one::<String>("parse") {
