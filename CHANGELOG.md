@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2023-12-04
+
+### Bug Fixes
+
+- Update egui to 0.24.1 to fix the white flash on window launch
+
+
+### Features
+
+- *(overlay/history)* Add ability to sort history bars by name or damage total
+- *(overlay/updater)* Add ui to overlay for auto updating, add auto update checking option
+- *(overlay/updater)* Add release notes to new version hover text
+- Add self-updating functionality, starting with --update cli argument
+
+
+### Performance
+
+- *(main)* Put backlog parsing in its own thread to not slow full application load
+
+
+### Styling
+
+- Tweak order of aspects to match the selection screen
+
+
 ## [0.2.3] - 2023-11-30
 
 ### Bug Fixes
