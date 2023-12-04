@@ -1,24 +1,63 @@
 name: Release Build
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v*.*.*'
 
 jobs:
-  release:
+  build:
     name: release ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        target: [x86_64-pc-windows-gnu, x86_64-unknown-linux-musl]
+        target: [x86_64-pc-windows-gnu, x86_64-unknown-linux-gnu]
+        include:
+          - target: x86_64-pc-windows-gnu
+            exe: .exe
     steps:
       - uses: actions/checkout@master
 
-      - name: Compile and release
-        uses: rust-build/rust-build.action@v1.4.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SRC_DIR: main
+      - name: build
+        uses: houseabsolute/actions-rust-cross@v0
         with:
-          RUSTTARGET: ${{ matrix.target }}
-          EXTRA_FILES: "README.md LICENSE"
+          target: ${{ matrix.target }}
+          toolchain: stable
+          args: "--release --features auto_update"
+          strip: true
+
+      - name: compress
+        run: "cp target/${{ matrix.target }}/release/inkbound-dps${{ matrix.exe }} . && zip inkbound-dps_${{ github.ref_name }}_${{ matrix.target }}.zip inkbound-dps${{ matrix.exe }} README.md LICENSE CHANGELOG.md"
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.target }}
+          path: "*.zip"
+
+  release:
+      runs-on: ubuntu-latest
+      needs: ["build"]
+      steps:
+      - uses: actions/checkout@master
+
+      - name: changelog
+        uses: orhun/git-cliff-action@v2
+        id: git-cliff
+        with:
+          args: "--current --strip header"
+        env:
+          OUTPUT: release.txt
+
+      - name: download
+        uses: actions/download-artifact@v3
+
+      - run: echo '${{ toJson(steps.git-cliff.outputs) }}'
+      - run: cat release.txt
+
+      - name: generate release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "**/*.zip"
+          # body_path: ${{ steps.git-cliff.outputs.changelog }}
+          body: "just why. ${{ steps.git-cliff.outputs.content }}"
