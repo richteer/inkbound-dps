@@ -15,6 +15,7 @@ pub struct WindowState {
     pub combat_individual_damage: windows::IndividualDamageState,
     pub color_settings: windows::ColorSettingsState,
     pub history: windows::HistoryState,
+    pub update: crate::windows::UpdateState,
 }
 
 // #[derive(Default)]

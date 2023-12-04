@@ -64,13 +64,18 @@ pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
                             ui.label("Fetching version information");
                         });
                     },
-                    UpdateStatus::Fetched(VersionStatus::Update(version)) => {
+                    UpdateStatus::Fetched(VersionStatus::Update(version, body)) => {
                         ui.horizontal(|ui| {
                             if ui.button("Update").clicked() {
                                 updater.do_update(false);
                             }
                             let current_version = updater.current_version.clone();
-                            ui.colored_label(egui::Color32::GREEN, format!("New version available! {current_version} ➡ {version}"));
+                            let new_version = ui.colored_label(egui::Color32::GREEN, format!("New version available! {current_version} ➡ {version}"));
+                            if let Some(body) = body {
+                                new_version.on_hover_ui(|ui| {
+                                    egui_commonmark::CommonMarkViewer::new("test").show(ui, &mut overlay.window_state.update.cache, &body);
+                                });
+                            }
                         });
                     },
                     // Basically the same as Idle, with additional text
@@ -104,6 +109,13 @@ pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
         }
     );
 }
+
+// TODO: Consider flattening this, moving to another file, or maintaining it in some other way
+#[derive(Default)]
+pub struct UpdateState {
+    cache: egui_commonmark::CommonMarkCache,
+}
+
 
 pub struct ColorSettingsState {
     pub show: bool,

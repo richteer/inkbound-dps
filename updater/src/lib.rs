@@ -16,7 +16,7 @@ pub enum UpdateStatus {
 #[derive(Debug, Clone)]
 pub enum VersionStatus {
     UpToDate,
-    Update(String),
+    Update(String, Option<String>),
 }
 
 #[derive(Default)]
@@ -95,7 +95,7 @@ impl Updater {
             let new_status = match update.get_latest_release() {
                 Ok(r) =>
                     match self_update::version::bump_is_greater(&current_version, &r.version).unwrap_or(false) {
-                        true => UpdateStatus::Fetched(VersionStatus::Update(r.version)),
+                        true => UpdateStatus::Fetched(VersionStatus::Update(r.version, r.body)),
                         false => UpdateStatus::Fetched(VersionStatus::UpToDate),
                     },
                 Err(e) => UpdateStatus::Error(e.to_string()),
