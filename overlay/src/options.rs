@@ -16,6 +16,7 @@ pub struct OverlayOptions {
     pub show_crit_bars: bool,
     pub crit_bar_opacity: u8,
     pub colors: ColorOptions,
+    pub auto_check_update: bool,
 }
 
 // TODO: consider using a crate to make this whole impl not necessary
@@ -32,6 +33,7 @@ impl Default for OverlayOptions {
             show_crit_bars: false,
             crit_bar_opacity: 128,
             colors: ColorOptions::default(),
+            auto_check_update: false,
         }
     }
 }

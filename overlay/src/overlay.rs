@@ -57,6 +57,19 @@ impl Overlay {
         let mut window_state = WindowState::default();
         window_state.color_settings.sync_from_options(&options);
 
+        {
+            let mut updater = updater::UPDATER.lock().unwrap();
+            // Confirmation is handled by the UI
+            updater.set_options(updater::UpdaterOptions::default()
+                .no_confirm(true)
+                .show_download_progress(false)
+            );
+
+            if options.auto_check_update {
+                updater.fetch_update(false);
+            }
+        }
+
         Self {
             datalog,
             window_state,
