@@ -95,14 +95,20 @@ fn main() {
         .arg(arg!(-s --"skip-current" "Skip over parsing current log file")
             .required(false)
             .action(clap::ArgAction::SetTrue)
-        )
+        );
+
+    #[cfg(feature = "auto_update")]
+    let matches = matches
         .arg(arg!(--update "Run self-updater and exit")
             .required(false)
             .action(clap::ArgAction::SetTrue)
-        )
+        );
+
+    let matches = matches
         .get_matches();
 
     // Initialize Updater
+    #[cfg(feature = "auto_update")]
     {
         let mut updater = updater::UPDATER.lock().unwrap();
         updater.init(env!("CARGO_PKG_VERSION").to_string());

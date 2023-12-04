@@ -16,6 +16,10 @@ strum.workspace = true
 eframe = { version = "0.24.1", features = ["persistence"] }
 mouse_position = "0.1.3"
 ron = "0.8.1"
-updater = { version = "0.1.0", path = "../updater" }
-egui_commonmark = "0.10.1"
 
+updater = { version = "0.1.0", path = "../updater", optional = true }
+egui_commonmark = {version = "0.10.1", optional = true }
+
+[features]
+default = []
+auto_update = ["dep:updater", "dep:egui_commonmark"]

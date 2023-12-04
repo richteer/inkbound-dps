@@ -4,6 +4,9 @@ pub use overlay::*;
 mod options;
 pub use options::OverlayOptions;
 
+#[cfg(feature = "auto_update")]
+mod updater;
+
 use inkbound_parser::aspects::Aspect;
 
 trait DefaultColor {

@@ -15,7 +15,8 @@ pub struct WindowState {
     pub combat_individual_damage: windows::IndividualDamageState,
     pub color_settings: windows::ColorSettingsState,
     pub history: windows::HistoryState,
-    pub update: crate::windows::UpdateState,
+    #[cfg(feature = "auto_update")]
+    pub update: crate::updater::UpdateState,
 }
 
 // #[derive(Default)]
@@ -58,6 +59,7 @@ impl Overlay {
         let mut window_state = WindowState::default();
         window_state.color_settings.sync_from_options(&options);
 
+        #[cfg(feature = "auto_update")]
         {
             let mut updater = updater::UPDATER.lock().unwrap();
             // Confirmation is handled by the UI
