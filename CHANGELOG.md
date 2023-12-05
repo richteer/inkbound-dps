@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - 2023-12-05
+
+### Miscellaneous Tasks
+
+- Rewrite actions, publish release on tag push
+
+
+### Refactor
+
+- *(updater)* Lock auto-update behavior behind a feature, disabled by default for custom builds
+
+
 ## [0.2.4] - 2023-12-04
 
 ### Bug Fixes
