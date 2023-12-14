@@ -20,18 +20,18 @@ pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Con
         return;
     }
 
-    let player_stats = if let Some(dive) = datalog.dives.get(overlay.window_state.dive_individual_damage.dive) {
-        dive.player_stats.player_stats.clone()
-    } else {
-        // Don't bother with the rest if there isn't dive data
-        return;
-    };
-
     let name = "Dive Individual Damage";
 
     Window::new(name).show(ctx, |ui| {
         let selection = &mut overlay.window_state.dive_individual_damage.player;
         show_dive_selection_box(ui, &mut overlay.window_state.dive_individual_damage.dive, datalog.dives.len());
+
+        let player_stats = if let Some(dive) = datalog.dives.get(overlay.window_state.dive_individual_damage.dive) {
+            dive.player_stats.player_stats.clone()
+        } else {
+            // Don't bother with the rest if there isn't dive data
+            return;
+        };
 
         egui::ComboBox::from_label("Select Player")
             .selected_text(format!("{}", selection.as_ref().unwrap_or(&"".to_string())))
