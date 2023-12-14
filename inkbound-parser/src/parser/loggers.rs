@@ -45,6 +45,7 @@ impl CombatLog {
         match event {
             Event::DamageDealt(_, dmg) => self.player_stats.apply_dealt_damage(dmg),
             Event::DamageReceived(_, dmg) => self.player_stats.apply_received_damage(dmg),
+            Event::OrbPickup(_, player) => self.player_stats.apply_orb_pickup(player),
             Event::StartCombat(_) => (),
             Event::EndCombat(_) => (),
             // Event::UnitClass(_, name, class) => self.player_stats.set_class(&name, class),
@@ -73,6 +74,7 @@ impl DiveLog {
             Event::StartCombat(_) => self.combats.insert(0, CombatLog::new()),
             Event::DamageDealt(_, dmg) => self.player_stats.apply_dealt_damage(dmg),
             Event::DamageReceived(_, dmg) => self.player_stats.apply_received_damage(dmg),
+            Event::OrbPickup(_, player) => self.player_stats.apply_orb_pickup(player),
             // Event::UnitClass(_, name, class) => self.player_stats.set_class(&name, class),
             // _ => debug!("received other event: {:?}", event),
             _ => (),

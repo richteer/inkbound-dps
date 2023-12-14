@@ -17,6 +17,7 @@ pub struct LogParser {
 #[derive(Debug)]
 enum InternalEvent {
     Damage(String, DamageEventData),
+    OrbPickup(String, Entity),
     RegisterName(String, i64, String),
     UnitClass(String, i64, String),
     EndDive(String),
@@ -89,6 +90,9 @@ impl LogParser {
         else if let Some(caps) = regex_captures!(r" I (\w+) \(EntityHandle:(\d+)\) is playing ability", line) {
             ParseEvent::Internal(InternalEvent::RegisterName(line.to_string(), caps.2.parse().unwrap(), caps.1.to_string()))
         }
+        else if let Some(caps) = regex_captures!(r"PlayerUnitHandle:\(EntityHandle:(\d+)\).*PickupData\-ManaOrbPickup", line) {
+            ParseEvent::Internal(InternalEvent::OrbPickup(line.to_string(), Entity::Id(caps.1.parse().unwrap())))
+        }
         else if regex_is_match!(r"Party run start triggered", line) {
             ParseEvent::Parsed(Event::StartDive(line.to_string()))
         }
@@ -126,6 +130,15 @@ impl LogParser {
             },
             ParseEvent::Internal(InternalEvent::Damage(line, dmg)) => {
                 Some(self.convert_damage(line, dmg))
+            }
+            ParseEvent::Internal(InternalEvent::OrbPickup(s, id)) => {
+                match id.to_player(&self.players, &self.classes) {
+                    Entity::Id(id) => {
+                        log::error!("unknown entity {id:?} apparently picked up an orb, ignoring");
+                        None
+                    },
+                    Entity::Player(p) => Some(Event::OrbPickup(s, p)),
+                }
             }
             // Register the EntityId -> Class mapping first, return the information RegisterPlayer when name is received
             ParseEvent::Internal(InternalEvent::UnitClass(_, id, class_id)) => {
@@ -177,6 +190,7 @@ mod tests {
     static L_END_COMBAT: &'static str = "0T23:47:19 32 I [EventSystem] broadcasting EventOnCombatEndSequenceStarted-WorldStateChangeCombatFinishedStartSequence";
     static L_NEXT_TURN: &'static str = "0T23:45:57 21 I Evaluating quest progress for (EntityHandle:16) with 101 active quests. Record variable: QuestObjective_TurnCount";
     static L_REGISTER_NAME: &'static str = "0T23:17:51 66 I TestPlayer (EntityHandle:22) is playing ability AbilityData-Flurry_AbilityData (Flurry my7gMbFo)";
+    static L_ORB_PICKUP: &'static str = "0T00:51:46 18 I [EventSystem] broadcasting EventOnPickupActivated-WorldStateChangePickupActivated-PlayerUnitHandle:(EntityHandle:9)-PickupHandle:(EntityHandle:95)-PickupData:PickupData-ManaOrbPickup (PickupData_pickupName-taadPy97-ccebe8a3bf921d043ac03a49bce8019f LzTNf24V)";
 
     #[test]
     fn parse_damage_line() {
@@ -305,6 +319,20 @@ mod tests {
 
         match &line {
             ParseEvent::Parsed(Event::NextTurn(_)) => (),
+            _ => {
+                println!("received {:?}", line);
+                assert!(false);
+            }
+        }
+    }
+
+    #[test]
+    fn parse_orb_pickup() {
+        let mut parser = LogParser::new();
+        let line = parser.do_parse(L_ORB_PICKUP);
+
+        match line {
+            ParseEvent::Internal(InternalEvent::OrbPickup(_, id)) => assert_eq!(id, Entity::Id(9)),
             _ => {
                 println!("received {:?}", line);
                 assert!(false);

@@ -99,5 +99,6 @@ pub enum Event {
     DamageOther(String, DamageEventData),
     // RegisterPlayer(String, String, String),
     NextTurn(String),
+    OrbPickup(String, PlayerData),
     // Unknown(String),
 }

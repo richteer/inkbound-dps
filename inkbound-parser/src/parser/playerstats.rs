@@ -14,6 +14,7 @@ pub struct PlayerStats {
     pub skill_totals: HashMap<String, i64>,
     // Subset of skill_totals that only contains crit damage
     pub crit_totals: HashMap<String, i64>,
+    pub orb_pickups: i64,
     // TODO: status effects applied, etc
 }
 
@@ -27,6 +28,7 @@ impl PlayerStats {
             total_damage_received: 0,
             skill_totals: HashMap::new(),
             crit_totals: HashMap::new(),
+            orb_pickups: 0,
         }
     }
 
@@ -43,6 +45,10 @@ impl PlayerStats {
 
     pub fn apply_received_damage(&mut self, dmg: DamageReceivedEventData) {
         self.total_damage_received += dmg.amount;
+    }
+
+    pub fn increment_orbs(&mut self) {
+        self.orb_pickups += 1;
     }
 }
 
@@ -82,6 +88,12 @@ impl PlayerStatList {
         };
 
         player.apply_received_damage(dmg);
+    }
+
+    pub fn apply_orb_pickup(&mut self, player: PlayerData) {
+        self.player_stats.entry(player.name.clone())
+            .and_modify(|e| e.increment_orbs())
+            .or_insert(PlayerStats::new(player));
     }
 
     // pub fn set_class(&mut self, name: &String, class: String) {
