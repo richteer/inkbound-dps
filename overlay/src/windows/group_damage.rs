@@ -20,16 +20,17 @@ pub fn draw_combat_damage_window(overlay: &mut Overlay, ctx: &egui::Context, dat
 
     let name = "Combat Group Damage";
     Window::new(name).show(ctx, |ui| {
-        show_dive_selection_box(ui, &mut overlay.window_state.combat_group_damage.dive, datalog.dives.len());
 
         let combats: &Vec<CombatLog> = {
             if let Some(dive) = datalog.dives.get(overlay.window_state.combat_group_damage.dive) {
                 &dive.combats
             } else {
+                ui.label(crate::windows::NO_DATA_MSG);
                 return // Dive doesn't exist, don't bother continuning
             }
         };
 
+        show_dive_selection_box(ui, &mut overlay.window_state.combat_group_damage.dive, datalog.dives.len());
         show_combat_selection_box(ui, &mut overlay.window_state.combat_group_damage.combat, combats.len());
 
         let statlist = if let Some(combat) = combats.get(overlay.window_state.combat_group_damage.combat) {
@@ -50,15 +51,17 @@ pub fn draw_dive_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datal
 
     let name = "Dive Group Damage";
     Window::new(name).show(ctx, |ui| {
-        show_dive_selection_box(ui, &mut overlay.window_state.dive_group_damage.dive, datalog.dives.len());
 
         let statlist: Vec<PlayerStats> = {
             if let Some(dive) = datalog.dives.get(overlay.window_state.dive_group_damage.dive) {
                 dive.player_stats.player_stats.values().cloned().collect()
             } else {
-                Vec::new()
+                ui.label(crate::windows::NO_DATA_MSG);
+                return
             }
         };
+
+        show_dive_selection_box(ui, &mut overlay.window_state.dive_group_damage.dive, datalog.dives.len());
 
         draw_group_damage_plot(ui, overlay, statlist, name);
     });

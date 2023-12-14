@@ -38,3 +38,5 @@ pub fn show_combat_selection_box(ui: &mut egui::Ui, combat_state: &mut usize, nu
             }
         });
 }
+
+static NO_DATA_MSG: &'static str = "Waiting for data...";

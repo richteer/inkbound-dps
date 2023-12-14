@@ -23,16 +23,18 @@ pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Con
     let name = "Dive Individual Damage";
 
     Window::new(name).show(ctx, |ui| {
-        let selection = &mut overlay.window_state.dive_individual_damage.player;
-        show_dive_selection_box(ui, &mut overlay.window_state.dive_individual_damage.dive, datalog.dives.len());
 
         let player_stats = if let Some(dive) = datalog.dives.get(overlay.window_state.dive_individual_damage.dive) {
             dive.player_stats.player_stats.clone()
         } else {
+            ui.label(crate::windows::NO_DATA_MSG);
             // Don't bother with the rest if there isn't dive data
             return;
         };
 
+        show_dive_selection_box(ui, &mut overlay.window_state.dive_individual_damage.dive, datalog.dives.len());
+
+        let selection = &mut overlay.window_state.dive_individual_damage.player;
         egui::ComboBox::from_label("Select Player")
             .selected_text(format!("{}", selection.as_ref().unwrap_or(&"".to_string())))
             .show_ui(ui, |ui| {
@@ -59,16 +61,17 @@ pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::C
 
     let name = "Combat Individual Damage";
     Window::new(name).show(ctx, |ui| {
-        show_dive_selection_box(ui, &mut overlay.window_state.combat_group_damage.dive, datalog.dives.len());
 
         let combats: &Vec<CombatLog> = {
             if let Some(dive) = datalog.dives.get(overlay.window_state.combat_group_damage.dive) {
                 &dive.combats
             } else {
+                ui.label(crate::windows::NO_DATA_MSG);
                 return // Dive doesn't exist, don't bother continuning
             }
         };
 
+        show_dive_selection_box(ui, &mut overlay.window_state.combat_group_damage.dive, datalog.dives.len());
         show_combat_selection_box(ui, &mut overlay.window_state.combat_group_damage.combat, combats.len());
 
         let player_stats = if let Some(combat) = combats.get(overlay.window_state.combat_group_damage.combat) {
