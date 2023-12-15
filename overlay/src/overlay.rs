@@ -2,10 +2,13 @@ use std::{sync::{Arc, RwLock}, collections::{BTreeSet, BTreeMap}};
 
 use egui::{Visuals, Pos2, ViewportBuilder, ViewportCommand};
 use inkbound_parser::parser::DataLog;
+use serde::de::DeserializeOwned;
 
 use crate::{windows::{self, WindowDisplay, WindowId}, options::OverlayOptions};
 
 static OPTIONS_STORAGE_KEY: &'static str = "overlayoptions";
+static WINDOWS_STORAGE_KEY: &'static str = "overlaywindows";
+static ENABLED_WINDOWS_STORAGE_KEY: &'static str = "overlayenabledwindows";
 
 #[derive(Default)]
 pub struct WindowState {
@@ -23,6 +26,39 @@ pub struct Overlay {
     pub enabled_windows: BTreeSet<WindowId>,
 }
 
+pub fn default_windows() -> BTreeMap<WindowId, Box<dyn WindowDisplay>> {
+    let windows: Vec<Box<dyn WindowDisplay>> = vec![
+        Box::new(crate::windows::GroupCombatWindow::default()),
+        Box::new(crate::windows::GroupDiveWindow::default()),
+        Box::new(crate::windows::IndividualCombatWindow::default()),
+        Box::new(crate::windows::IndividualDiveWindow::default()),
+        Box::new(crate::windows::HistoryWindow::default()),
+    ];
+    windows.into_iter().map(|e| (e.id(), e)).collect()
+}
+
+fn load_from_storage<T: Default + DeserializeOwned>(storage: Option<&dyn eframe::Storage>, key: &str) -> Option<T> {
+    if let Some(storage) = storage {
+        let data = storage.get_string(key);
+        if let Some(data) = data {
+            match ron::from_str::<T>(data.as_str()) {
+                Ok(d) => Some(d),
+                Err(e) => {
+                    log::warn!("options parse error: {:?}", e);
+                    log::warn!("failed to parse stored options, reverting to default options");
+                    None
+                }
+            }
+        } else {
+            log::debug!("no options to load, using defaults");
+            None
+        }
+    } else {
+        log::warn!("failed to load persistence storage, using default options");
+        None
+    }
+}
+
 impl Overlay {
     pub fn new(_cc: &eframe::CreationContext<'_>, datalog: Arc<RwLock<DataLog>>) -> Self {
         // Customize egui here with cc.egui_ctx.set_fonts and cc.egui_ctx.set_visuals.
@@ -33,25 +69,20 @@ impl Overlay {
             ..Default::default()
         });
 
-        let options = if let Some(storage) = _cc.storage {
-            let options = storage.get_string(OPTIONS_STORAGE_KEY);
-            if let Some(options) = options {
-                match ron::from_str(options.as_str()) {
-                    Ok(options) => options,
-                    Err(e) => {
-                        log::warn!("options parse error: {:?}", e);
-                        log::warn!("failed to parse stored options, reverting to default options");
-                        OverlayOptions::default()
-                    }
-                }
-            } else {
-                log::debug!("no options to load, using defaults");
-                OverlayOptions::default()
-            }
+        let options = load_from_storage(_cc.storage, OPTIONS_STORAGE_KEY);
+
+        // If options could not be loaded, either there is an error, or this is the first run.
+        let (windows, enabled_windows) = if options.is_none() {
+            // Load defaults in this case
+            (default_windows(), BTreeSet::new())
         } else {
-            log::warn!("failed to load persistence storage, using default options");
-            OverlayOptions::default()
+            // Otherwise handle the rest of the loads
+            let windows: BTreeMap<WindowId, Box<dyn WindowDisplay>> = load_from_storage(_cc.storage, WINDOWS_STORAGE_KEY).unwrap_or_default();
+            let enabled_windows = load_from_storage(_cc.storage, ENABLED_WINDOWS_STORAGE_KEY).unwrap_or_default();
+            (windows, enabled_windows)
         };
+
+        let options = options.unwrap_or_default();
 
         let mut window_state = WindowState::default();
         window_state.color_settings.sync_from_options(&options);
@@ -70,23 +101,12 @@ impl Overlay {
             }
         }
 
-        // TODO: Replace this with a load and/or defaults
-        let windows: Vec<Box<dyn WindowDisplay>> = vec![
-                Box::new(crate::windows::GroupCombatWindow::default()),
-                Box::new(crate::windows::GroupDiveWindow::default()),
-                Box::new(crate::windows::IndividualCombatWindow::default()),
-                Box::new(crate::windows::IndividualDiveWindow::default()),
-                Box::new(crate::windows::HistoryWindow::default()),
-            ];
-        let windows = windows.into_iter().map(|e| (e.id(), e)).collect();
-
         Self {
             datalog,
             window_state,
             options,
             windows,
-            // TODO: persist this
-            enabled_windows: BTreeSet::new(),
+            enabled_windows,
         }
     }
 }
@@ -96,10 +116,19 @@ impl eframe::App for Overlay {
         egui::Rgba::TRANSPARENT.to_rgba_unmultiplied()
     }
 
+    // TODO: factor out a helper
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         match ron::to_string(&self.options) {
             Ok(options) => storage.set_string(OPTIONS_STORAGE_KEY, options),
             Err(e) => log::error!("failed to serialize options: {:?}", e),
+        }
+        match ron::to_string(&self.windows) {
+            Ok(windows) => storage.set_string(WINDOWS_STORAGE_KEY, windows),
+            Err(e) => log::error!("failed to serialize windows: {:?}", e),
+        }
+        match ron::to_string(&self.enabled_windows) {
+            Ok(enabled_windows) => storage.set_string(ENABLED_WINDOWS_STORAGE_KEY, enabled_windows),
+            Err(e) => log::error!("failed to serialize enabled_windows: {:?}", e),
         }
     }
 

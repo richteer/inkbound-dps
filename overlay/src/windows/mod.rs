@@ -16,6 +16,7 @@ use crate::OverlayOptions;
 
 pub type WindowId = String;
 
+#[typetag::serde(tag = "type")]
 pub trait WindowDisplay {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog);
     fn id(&self) -> WindowId;

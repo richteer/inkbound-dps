@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use egui::Ui;
 use egui_plot::{Plot, BarChart, Bar, Text, PlotPoint};
 use inkbound_parser::parser::{PlayerStats, DataLog, CombatLog};
+use serde::{Deserialize, Serialize};
 
 use crate::OverlayOptions;
 
@@ -15,11 +16,13 @@ pub struct IndividualDamageState {
     pub combat: usize,
 }
 
-#[derive(Default)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct IndividualDiveWindow {
+    #[serde(skip)]
     state: IndividualDamageState,
 }
 
+#[typetag::serde]
 impl WindowDisplay for IndividualDiveWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
         self.draw_dive_individual_damage_window(ui, options, data);
@@ -67,11 +70,13 @@ impl IndividualDiveWindow {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct IndividualCombatWindow {
+    #[serde(skip)]
     state: IndividualDamageState,
 }
 
+#[typetag::serde]
 impl WindowDisplay for IndividualCombatWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
         self.draw_combat_individual_damage_window(ui, options, data);

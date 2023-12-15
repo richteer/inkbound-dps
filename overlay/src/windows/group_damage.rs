@@ -1,6 +1,7 @@
 use egui::Ui;
 use egui_plot::{Text, PlotPoint, BarChart, Plot, Bar};
 use inkbound_parser::parser::{PlayerStats, DataLog, CombatLog};
+use serde::{Deserialize, Serialize};
 
 use crate::OverlayOptions;
 
@@ -12,11 +13,13 @@ pub struct GroupDamageState {
     pub combat: usize,
 }
 
-#[derive(Default)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct GroupCombatWindow {
+    #[serde(skip)]
     state: GroupDamageState,
 }
 
+#[typetag::serde]
 impl WindowDisplay for GroupCombatWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
         self.draw_combat_damage_window(ui, options, data);
@@ -58,11 +61,13 @@ impl GroupCombatWindow {
 }
 
 // TODO: Consider merging these somehow
-#[derive(Default)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct GroupDiveWindow {
+    #[serde(skip)]
     state: GroupDamageState,
 }
 
+#[typetag::serde]
 impl WindowDisplay for GroupDiveWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
         self.draw_dive_damage_window(ui, options, data);

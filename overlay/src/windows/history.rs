@@ -75,12 +75,14 @@ impl Default for HistoryOptions {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct HistoryWindow {
     pub options: HistoryOptions,
+    #[serde(skip)]
     state: HistoryState,
 }
 
+#[typetag::serde]
 impl WindowDisplay for HistoryWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
         self.draw_history_window_new(ui, options, data);

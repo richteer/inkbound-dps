@@ -10,7 +10,6 @@ use crate::{Overlay, DefaultColor};
 pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
     Window::new("Settings")
         .show(ctx, |ui| {
-            ui.separator();
             ui.heading("Windows");
             for (id, window) in overlay.windows.iter() {
                 let mut open = overlay.enabled_windows.contains(id);
@@ -20,6 +19,9 @@ pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
                         false => overlay.enabled_windows.remove(id),
                     };
                 };
+            }
+            if ui.button("Reset Default Windows").clicked() {
+                overlay.windows = crate::overlay::default_windows();
             }
 
             ui.separator();
