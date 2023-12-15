@@ -1,20 +1,15 @@
-use std::sync::{Arc, RwLock};
+use std::{sync::{Arc, RwLock}, collections::{BTreeSet, BTreeMap}};
 
 use egui::{Visuals, Pos2, ViewportBuilder, ViewportCommand};
 use inkbound_parser::parser::DataLog;
 
-use crate::{windows, options::OverlayOptions};
+use crate::{windows::{self, WindowDisplay, WindowId}, options::OverlayOptions};
 
 static OPTIONS_STORAGE_KEY: &'static str = "overlayoptions";
 
 #[derive(Default)]
 pub struct WindowState {
-    pub dive_group_damage: windows::GroupDamageState,
-    pub combat_group_damage: windows::GroupDamageState,
-    pub dive_individual_damage: windows::IndividualDamageState,
-    pub combat_individual_damage: windows::IndividualDamageState,
     pub color_settings: windows::ColorSettingsState,
-    pub history: windows::HistoryState,
     #[cfg(feature = "auto_update")]
     pub update: crate::updater::UpdateState,
 }
@@ -24,6 +19,8 @@ pub struct Overlay {
     pub datalog: Arc<RwLock<DataLog>>,
     pub window_state: WindowState,
     pub options: OverlayOptions,
+    pub windows: BTreeMap<WindowId, Box<dyn WindowDisplay>>,
+    pub enabled_windows: BTreeSet<WindowId>,
 }
 
 impl Overlay {
@@ -73,10 +70,23 @@ impl Overlay {
             }
         }
 
+        // TODO: Replace this with a load and/or defaults
+        let windows: Vec<Box<dyn WindowDisplay>> = vec![
+                Box::new(crate::windows::GroupCombatWindow::default()),
+                Box::new(crate::windows::GroupDiveWindow::default()),
+                Box::new(crate::windows::IndividualCombatWindow::default()),
+                Box::new(crate::windows::IndividualDiveWindow::default()),
+                Box::new(crate::windows::HistoryWindow::default()),
+            ];
+        let windows = windows.into_iter().map(|e| (e.id(), e)).collect();
+
         Self {
             datalog,
             window_state,
             options,
+            windows,
+            // TODO: persist this
+            enabled_windows: BTreeSet::new(),
         }
     }
 }
@@ -145,11 +155,20 @@ pub fn draw_overlay(overlay: &mut Overlay, ctx: &egui::Context) {
         overlay.datalog.read().unwrap().clone()
     };
     windows::draw_settings_window(overlay, ctx);
-    windows::draw_dive_damage_window(overlay, ctx, &datalog);
-    windows::draw_combat_damage_window(overlay, ctx, &datalog);
-    windows::draw_dive_individual_damage_window(overlay, ctx, &datalog);
-    windows::draw_combat_individual_damage_window(overlay, ctx, &datalog);
-    windows::draw_history_window(overlay, ctx, &datalog);
+    // windows::draw_dive_individual_damage_window(overlay, ctx, &datalog);
+    // windows::draw_combat_individual_damage_window(overlay, ctx, &datalog);
+    for (id, window) in overlay.windows.iter_mut() {
+        if overlay.enabled_windows.contains(id) {
+            // TODO: use window.id() as the egui window id
+            let mut open = true;
+            egui::Window::new(window.name()).open(&mut open).show(ctx, |ui| {
+                window.show(ui, &overlay.options, &datalog);
+            });
+            if !open {
+                overlay.enabled_windows.remove(id);
+            }
+        }
+    }
 }
 
 

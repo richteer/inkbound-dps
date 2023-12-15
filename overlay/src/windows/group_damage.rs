@@ -1,10 +1,10 @@
-use egui::{Ui, Window};
+use egui::Ui;
 use egui_plot::{Text, PlotPoint, BarChart, Plot, Bar};
 use inkbound_parser::parser::{PlayerStats, DataLog, CombatLog};
 
-use crate::Overlay;
+use crate::OverlayOptions;
 
-use super::{show_dive_selection_box, show_combat_selection_box};
+use super::{show_dive_selection_box, show_combat_selection_box, WindowDisplay};
 
 #[derive(Default)]
 pub struct GroupDamageState {
@@ -12,17 +12,31 @@ pub struct GroupDamageState {
     pub combat: usize,
 }
 
-#[inline]
-pub fn draw_combat_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.options.show_combat_group_damage {
-        return;
+#[derive(Default)]
+pub struct GroupCombatWindow {
+    state: GroupDamageState,
+}
+
+impl WindowDisplay for GroupCombatWindow {
+    fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
+        self.draw_combat_damage_window(ui, options, data);
     }
 
-    let name = "Combat Group Damage";
-    Window::new(name).show(ctx, |ui| {
+    fn id(&self) -> super::WindowId {
+        self.name()
+    }
+
+    fn name(&self) -> String {
+        "Combat Group Damage".to_string()
+    }
+}
+
+impl GroupCombatWindow {
+    pub fn draw_combat_damage_window(&mut self, ui: &mut Ui, options: &OverlayOptions, datalog: &DataLog) {
+        let name = "Combat Group Damage";
 
         let combats: &Vec<CombatLog> = {
-            if let Some(dive) = datalog.dives.get(overlay.window_state.combat_group_damage.dive) {
+            if let Some(dive) = datalog.dives.get(self.state.dive) {
                 &dive.combats
             } else {
                 ui.label(crate::windows::NO_DATA_MSG);
@@ -30,30 +44,45 @@ pub fn draw_combat_damage_window(overlay: &mut Overlay, ctx: &egui::Context, dat
             }
         };
 
-        show_dive_selection_box(ui, &mut overlay.window_state.combat_group_damage.dive, datalog.dives.len());
-        show_combat_selection_box(ui, &mut overlay.window_state.combat_group_damage.combat, combats.len());
+        show_dive_selection_box(ui, &mut self.state.dive, datalog.dives.len());
+        show_combat_selection_box(ui, &mut self.state.combat, combats.len());
 
-        let statlist = if let Some(combat) = combats.get(overlay.window_state.combat_group_damage.combat) {
+        let statlist = if let Some(combat) = combats.get(self.state.combat) {
             combat.player_stats.player_stats.values().cloned().collect()
         } else {
             Vec::new()
         };
 
-        draw_group_damage_plot(ui, overlay, statlist, name);
-    });
+        draw_group_damage_plot(ui, options, statlist, name);
+    }
 }
 
-#[inline]
-pub fn draw_dive_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.options.show_dive_group_damage {
-        return;
+// TODO: Consider merging these somehow
+#[derive(Default)]
+pub struct GroupDiveWindow {
+    state: GroupDamageState,
+}
+
+impl WindowDisplay for GroupDiveWindow {
+    fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
+        self.draw_dive_damage_window(ui, options, data);
     }
 
-    let name = "Dive Group Damage";
-    Window::new(name).show(ctx, |ui| {
+    fn id(&self) -> super::WindowId {
+        self.name()
+    }
+
+    fn name(&self) -> String {
+        "Dive Group Damage".to_string()
+    }
+}
+
+impl GroupDiveWindow {
+    pub fn draw_dive_damage_window(&mut self, ui: &mut Ui, options: &OverlayOptions, datalog: &DataLog) {
+        let name = "Dive Group Damage";
 
         let statlist: Vec<PlayerStats> = {
-            if let Some(dive) = datalog.dives.get(overlay.window_state.dive_group_damage.dive) {
+            if let Some(dive) = datalog.dives.get(self.state.dive) {
                 dive.player_stats.player_stats.values().cloned().collect()
             } else {
                 ui.label(crate::windows::NO_DATA_MSG);
@@ -61,15 +90,15 @@ pub fn draw_dive_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datal
             }
         };
 
-        show_dive_selection_box(ui, &mut overlay.window_state.dive_group_damage.dive, datalog.dives.len());
+        show_dive_selection_box(ui, &mut self.state.dive, datalog.dives.len());
 
-        draw_group_damage_plot(ui, overlay, statlist, name);
-    });
+        draw_group_damage_plot(ui, options, statlist, name);
+    }
 }
 
 /// Helper to draw the plot for group damage stats
 #[inline]
-fn draw_group_damage_plot(ui: &mut Ui, overlay: &Overlay, mut statlist: Vec<PlayerStats>, name: &str) {
+fn draw_group_damage_plot(ui: &mut Ui, options: &OverlayOptions, mut statlist: Vec<PlayerStats>, name: &str) {
     // TODO: Precalculate this in the DiveLog probably
     let party_damage = statlist.iter().fold(0, |acc, player| acc + player.total_damage_dealt) as f64;
     
@@ -78,7 +107,7 @@ fn draw_group_damage_plot(ui: &mut Ui, overlay: &Overlay, mut statlist: Vec<Play
         statlist.iter().enumerate().map(|(index, stats)| 
             Bar::new(index as f64, stats.total_damage_dealt as f64)
                 .width(1.0)
-                .fill(overlay.options.colors.get_aspect_color(&stats.player_data.class))
+                .fill(options.colors.get_aspect_color(&stats.player_data.class))
         ).collect()
     };
     let texts: Vec<Text> = {

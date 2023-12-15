@@ -1,30 +1,44 @@
 use std::collections::HashMap;
 
-use egui::{Window, Ui};
+use egui::Ui;
 use egui_plot::{Plot, BarChart, Bar, Text, PlotPoint};
 use inkbound_parser::parser::{PlayerStats, DataLog, CombatLog};
 
-use crate::Overlay;
+use crate::OverlayOptions;
 
-use super::{show_dive_selection_box, show_combat_selection_box};
+use super::{show_dive_selection_box, show_combat_selection_box, WindowDisplay};
 
 #[derive(Default)]
 pub struct IndividualDamageState {
     pub player: Option<String>,
     pub dive: usize,
+    pub combat: usize,
 }
 
-#[inline]
-pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.options.show_dive_individual_damage {
-        return;
+#[derive(Default)]
+pub struct IndividualDiveWindow {
+    state: IndividualDamageState,
+}
+
+impl WindowDisplay for IndividualDiveWindow {
+    fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
+        self.draw_dive_individual_damage_window(ui, options, data);
     }
 
-    let name = "Dive Individual Damage";
+    fn id(&self) -> super::WindowId {
+        self.name()
+    }
 
-    Window::new(name).show(ctx, |ui| {
+    fn name(&self) -> String {
+        "Dive Individual Damage".to_string()
+    }
+}
 
-        let player_stats = if let Some(dive) = datalog.dives.get(overlay.window_state.dive_individual_damage.dive) {
+impl IndividualDiveWindow {
+    pub fn draw_dive_individual_damage_window(&mut self, ui: &mut Ui, options: &OverlayOptions, datalog: &DataLog) {
+        let name = "Dive Individual Damage";
+
+        let player_stats = if let Some(dive) = datalog.dives.get(self.state.dive) {
             dive.player_stats.player_stats.clone()
         } else {
             ui.label(crate::windows::NO_DATA_MSG);
@@ -32,9 +46,9 @@ pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Con
             return;
         };
 
-        show_dive_selection_box(ui, &mut overlay.window_state.dive_individual_damage.dive, datalog.dives.len());
+        show_dive_selection_box(ui, &mut self.state.dive, datalog.dives.len());
 
-        let selection = &mut overlay.window_state.dive_individual_damage.player;
+        let selection = &mut self.state.player;
         egui::ComboBox::from_label("Select Player")
             .selected_text(format!("{}", selection.as_ref().unwrap_or(&"".to_string())))
             .show_ui(ui, |ui| {
@@ -45,25 +59,39 @@ pub fn draw_dive_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Con
         );
         if let Some(selection) = selection {
             if let Some(player_stats) = player_stats.get(selection) {
-                draw_individual_damage_plot(ui, player_stats, name, overlay);
+                draw_individual_damage_plot(ui, player_stats, name, options);
             }
-        } else if let Some(player_stats) = player_stats.get(&overlay.options.default_player_name) {
-            draw_individual_damage_plot(ui, player_stats, name, overlay);
+        } else if let Some(player_stats) = player_stats.get(&options.default_player_name) {
+            draw_individual_damage_plot(ui, player_stats, name, options);
         }
-    });
+    }
 }
 
-#[inline]
-pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.options.show_combat_individual_damage {
-        return;
+#[derive(Default)]
+pub struct IndividualCombatWindow {
+    state: IndividualDamageState,
+}
+
+impl WindowDisplay for IndividualCombatWindow {
+    fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
+        self.draw_combat_individual_damage_window(ui, options, data);
     }
 
-    let name = "Combat Individual Damage";
-    Window::new(name).show(ctx, |ui| {
+    fn id(&self) -> super::WindowId {
+        self.name()
+    }
+
+    fn name(&self) -> String {
+        "Combat Individual Damage".to_string()
+    }
+}
+
+impl IndividualCombatWindow {
+    pub fn draw_combat_individual_damage_window(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, datalog: &DataLog) {
+        let name = "Combat Individual Damage";
 
         let combats: &Vec<CombatLog> = {
-            if let Some(dive) = datalog.dives.get(overlay.window_state.combat_group_damage.dive) {
+            if let Some(dive) = datalog.dives.get(self.state.dive) {
                 &dive.combats
             } else {
                 ui.label(crate::windows::NO_DATA_MSG);
@@ -71,16 +99,16 @@ pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::C
             }
         };
 
-        show_dive_selection_box(ui, &mut overlay.window_state.combat_group_damage.dive, datalog.dives.len());
-        show_combat_selection_box(ui, &mut overlay.window_state.combat_group_damage.combat, combats.len());
+        show_dive_selection_box(ui, &mut self.state.dive, datalog.dives.len());
+        show_combat_selection_box(ui, &mut self.state.combat, combats.len());
 
-        let player_stats = if let Some(combat) = combats.get(overlay.window_state.combat_group_damage.combat) {
+        let player_stats = if let Some(combat) = combats.get(self.state.combat) {
             &combat.player_stats.player_stats
         } else {
             return // No combat, no need to select a player or draw a plot
         };
 
-        let selection = &mut overlay.window_state.combat_individual_damage.player;
+        let selection = &mut self.state.player;
 
         egui::ComboBox::from_label("Select Player")
             .selected_text(format!("{}", selection.as_ref().unwrap_or(&"".to_string())))
@@ -93,27 +121,27 @@ pub fn draw_combat_individual_damage_window(overlay: &mut Overlay, ctx: &egui::C
 
         if let Some(selection) = selection {
             if let Some(player_stats) = player_stats.get(selection) {
-                draw_individual_damage_plot(ui, player_stats, name, overlay);
+                draw_individual_damage_plot(ui, player_stats, name, options);
             }
-        } else if let Some(player_stats) = player_stats.get(&overlay.options.default_player_name) {
-            draw_individual_damage_plot(ui, player_stats, name, overlay);
+        } else if let Some(player_stats) = player_stats.get(&options.default_player_name) {
+            draw_individual_damage_plot(ui, player_stats, name, options);
         }
-    });
+    }
 }
 
 /// Draw the bar plot for the individual skills given the player stats data
 #[inline]
-fn draw_individual_damage_plot(ui: &mut Ui, player_stats: &PlayerStats, name: &str, overlay: &Overlay) {
+fn draw_individual_damage_plot(ui: &mut Ui, player_stats: &PlayerStats, name: &str, options: &OverlayOptions) {
     let mut skill_totals: HashMap<String, (i64, i64)> = HashMap::new();
     player_stats.skill_totals.iter().for_each(|(k,v)| { skill_totals.insert(k.clone(), (*v, 0)); });
 
     // Skip if not showing crit bars for performance I guess
-    if overlay.options.show_crit_bars {
+    if options.show_crit_bars {
         player_stats.crit_totals.iter().for_each(|(k, crit_dmg)| { skill_totals.entry(k.clone())
             .and_modify(|elem| elem.1 += crit_dmg)
             .or_insert((0, *crit_dmg)); } );
     }
-    
+
     // let mut skill_totals: Vec<(String, i64)> = player_stats.skill_totals.clone().into_iter().collect();
     let mut skill_totals: Vec<(String, (i64, i64))> = skill_totals.into_iter().collect();
     skill_totals.sort_by(|a,b| {
@@ -124,8 +152,8 @@ fn draw_individual_damage_plot(ui: &mut Ui, player_stats: &PlayerStats, name: &s
         }
     });
 
-    let bar_color = overlay.options.colors.get_aspect_color(&player_stats.player_data.class);
-        let bars = if overlay.options.show_crit_bars {
+    let bar_color = options.colors.get_aspect_color(&player_stats.player_data.class);
+        let bars = if options.show_crit_bars {
         skill_totals.iter().enumerate().map(|(index, (_, (dmg, crit)))| {
             [
                 Bar::new(index as f64, *dmg as f64)
@@ -134,7 +162,7 @@ fn draw_individual_damage_plot(ui: &mut Ui, player_stats: &PlayerStats, name: &s
                 ,
                 Bar::new(index as f64, *crit as f64)
                     .width(1.0)
-                    .fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, overlay.options.crit_bar_opacity))
+                    .fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, options.crit_bar_opacity))
             ]
         }).flatten().collect()
     } else {

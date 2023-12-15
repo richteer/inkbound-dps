@@ -1,12 +1,12 @@
-use egui::{Window, Align2};
+use egui::Align2;
 use egui_plot::{Plot, Bar, BarChart, AxisHints, Text, PlotPoint};
 use inkbound_parser::parser::{DataLog, PlayerStats, DiveLog};
 use serde::{Deserialize, Serialize};
 use strum::{IntoEnumIterator, EnumIter};
 
-use crate::{Overlay, options::ColorOptions};
+use crate::{options::ColorOptions, OverlayOptions};
 
-use super::show_dive_selection_box;
+use super::{show_dive_selection_box, WindowDisplay, WindowId};
 
 #[derive(Default, PartialEq, Serialize, Deserialize)]
 pub enum HistoryMode {
@@ -52,6 +52,7 @@ impl std::fmt::Display for BarOrder {
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
+// TODO: Re-persist these
 pub struct HistoryOptions {
     pub show: bool,
     pub mode: HistoryMode,
@@ -71,6 +72,26 @@ impl Default for HistoryOptions {
             stacked_show_totals: false,
             bar_order: BarOrder::default(),
         }
+    }
+}
+
+#[derive(Default)]
+pub struct HistoryWindow {
+    pub options: HistoryOptions,
+    state: HistoryState,
+}
+
+impl WindowDisplay for HistoryWindow {
+    fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
+        self.draw_history_window_new(ui, options, data);
+    }
+
+    fn id(&self) -> WindowId {
+        self.name()
+    }
+
+    fn name(&self) -> String {
+        "History".to_string()
     }
 }
 
@@ -139,52 +160,49 @@ fn generate_stacked_bars(dive: &DiveLog, bar_width: f64, show_stacked_totals: bo
 }
 
 
-pub fn draw_history_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: &DataLog) {
-    if !overlay.options.history.show {
-        return;
-    }
-    
-    Window::new("History").show(ctx, |ui| {
-        show_dive_selection_box(ui, &mut overlay.window_state.history.dive, datalog.dives.len());
+impl HistoryWindow {
+
+    pub fn draw_history_window_new(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, datalog: &DataLog) {
+        show_dive_selection_box(ui, &mut self.state.dive, datalog.dives.len());
         egui::ComboBox::from_label("Mode")
-            .selected_text(overlay.options.history.mode.to_string())
+            .selected_text(self.options.mode.to_string())
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut overlay.options.history.mode, HistoryMode::Split, "Split");
-                ui.selectable_value(&mut overlay.options.history.mode, HistoryMode::Stacked, "Stacked");
+                ui.selectable_value(&mut self.options.mode, HistoryMode::Split, "Split");
+                ui.selectable_value(&mut self.options.mode, HistoryMode::Stacked, "Stacked");
             })
             .response.on_hover_text("Select which mode to render the history plot.\n\nSplit - Each player has their own vertical bar grouped by combat.\nStacked - Player damage bars are stacked on top of each other, with the total length of the bar representing total group damage.");
 
         egui::ComboBox::from_label("Bar Order")
-            .selected_text(overlay.options.history.bar_order.to_string())
+            .selected_text(self.options.bar_order.to_string())
             .show_ui(ui, |ui|{
-                BarOrder::iter().for_each(|e| { ui.selectable_value(&mut overlay.options.history.bar_order, e, e.to_string()); })
+                BarOrder::iter().for_each(|e| { ui.selectable_value(&mut self.options.bar_order, e, e.to_string()); })
             }).response.on_hover_text("The order that the bars will be rendered.\n\nIn split mode, ascending(⬆) is left to right.\nIn stacked mode, ascending(⬆) is bottom-up.");
 
-        match overlay.options.history.mode {
+        match self.options.mode {
             HistoryMode::Split => {
-                ui.add(egui::Slider::new(&mut overlay.options.history.group_bar_width, 0.25..=1.0)
+                ui.add(egui::Slider::new(&mut self.options.group_bar_width, 0.25..=1.0)
                     .max_decimals(2)
                     .text("Bar Group Width"));
             },
             HistoryMode::Stacked => {
-                ui.add(egui::Slider::new(&mut overlay.options.history.stacked_bar_width, 0.25..=1.0)
+                ui.add(egui::Slider::new(&mut self.options.stacked_bar_width, 0.25..=1.0)
                     .max_decimals(2)
                     .text("Bar Width"));
-                ui.checkbox(&mut overlay.options.history.stacked_show_totals, "Show Totals");
+                ui.checkbox(&mut self.options.stacked_show_totals, "Show Totals");
             },
         }
 
         ui.separator();
-        
-        let dive = if let Some(dive) = datalog.dives.get(overlay.window_state.history.dive) {
+
+        let dive = if let Some(dive) = datalog.dives.get(self.state.dive) {
             dive
         } else {
             return
         };
 
-        let (bars, texts) = match overlay.options.history.mode {
-            HistoryMode::Split => (generate_split_bars(dive, overlay.options.history.group_bar_width, &overlay.options.colors, overlay.options.history.bar_order), None),
-            HistoryMode::Stacked => generate_stacked_bars(dive, overlay.options.history.stacked_bar_width, overlay.options.history.stacked_show_totals, &overlay.options.colors, overlay.options.history.bar_order),
+        let (bars, texts) = match self.options.mode {
+            HistoryMode::Split => (generate_split_bars(dive, self.options.group_bar_width, &options.colors, self.options.bar_order), None),
+            HistoryMode::Stacked => generate_stacked_bars(dive, self.options.stacked_bar_width, self.options.stacked_show_totals, &options.colors, self.options.bar_order),
         };
 
         let chart = BarChart::new(bars);
@@ -220,6 +238,5 @@ pub fn draw_history_window(overlay: &mut Overlay, ctx: &egui::Context, datalog: 
                     }
                 }
             });
-            
-    });
+    }
 }

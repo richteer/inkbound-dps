@@ -10,6 +10,18 @@ pub use group_damage::*;
 mod history;
 pub use history::*;
 
+use inkbound_parser::parser::DataLog;
+
+use crate::OverlayOptions;
+
+pub type WindowId = String;
+
+pub trait WindowDisplay {
+    fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog);
+    fn id(&self) -> WindowId;
+    fn name(&self) -> String;
+}
+
 #[inline]
 pub fn inverted_number_label(current: usize, total: usize) -> String {
     format!("{}{}", total - current, if current == 0 {
