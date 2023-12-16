@@ -84,6 +84,18 @@ impl DiveCombatSplit for IndividualSkillsWindow {
     }
 }
 
+#[inline]
+fn clean_skill_name<'a>(name: &String) -> String {
+    name
+        .replace("Damage","")
+        .replace("Upgrade","")
+        .replace("Legendary", "➡")
+        .replace("_"," ")
+        .trim()
+        .to_string()
+}
+
+
 impl IndividualSkillsWindow {
     fn handle_per_dive<'a>(&mut self, ui: &mut Ui, datalog: &'a DataLog) -> Option<&'a PlayerStats> {
         let player_stats = if let Some(dive) = datalog.dives.get(self.state.dive) {
@@ -169,7 +181,7 @@ impl IndividualSkillsWindow {
                 Text::new(
                     PlotPoint { x: 0.0, y: index as f64 },
                     format!("  {} - {} ({:.2}%)",
-                        name,
+                        clean_skill_name(name),
                         dmg,
                         *dmg as f64 / player_stats.total_damage_dealt as f64 * 100.0,
                     )
