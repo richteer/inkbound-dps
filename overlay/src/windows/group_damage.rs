@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::OverlayOptions;
 
-use super::{show_dive_selection_box, show_combat_selection_box, WindowDisplay, DamageTotalsMode};
+use super::{show_dive_selection_box, show_combat_selection_box, WindowDisplay, DamageTotalsMode, DiveCombatSplit};
 
 #[derive(Default, Debug)]
 pub struct GroupDamageState {
@@ -23,10 +23,7 @@ pub struct GroupDamageWindow {
 #[typetag::serde]
 impl WindowDisplay for GroupDamageWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
-        ui.horizontal(|ui| {
-           ui.selectable_value(&mut self.mode, DamageTotalsMode::Dive, DamageTotalsMode::Dive.to_string());
-           ui.selectable_value(&mut self.mode, DamageTotalsMode::Combat, DamageTotalsMode::Combat.to_string());
-        });
+        self.mode_selection(ui);
 
         match &self.mode {
             DamageTotalsMode::Dive => self.draw_dive_damage_window(ui, options, data),
@@ -36,6 +33,16 @@ impl WindowDisplay for GroupDamageWindow {
 
     fn name(&self) -> String {
         format!("Group Damage: {}", self.mode.to_string())
+    }
+}
+
+impl DiveCombatSplit for GroupDamageWindow {
+    fn mode<'a>(&'a mut self) -> &'a mut DamageTotalsMode {
+        &mut self.mode
+    }
+
+    fn set_mode(&mut self, mode: DamageTotalsMode) {
+        self.mode = mode
     }
 }
 

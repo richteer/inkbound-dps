@@ -39,6 +39,17 @@ enum AddWindowChoice {
     History,
 }
 
+impl std::fmt::Display for AddWindowChoice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            // TODO: Consider defining these in the mod so they can be reused by the window title too or something
+            AddWindowChoice::GroupDamage => "Group Damage",
+            AddWindowChoice::IndividualSkills => "Skill Totals",
+            AddWindowChoice::History => "History",
+        })
+    }
+}
+
 impl From<&AddWindowChoice> for OverlayWindow {
     fn from(value: &AddWindowChoice) -> Self {
         use super::*;
@@ -101,14 +112,14 @@ pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
                 }
 
                 let selected_text = match &overlay.window_state.settings.add_window {
-                    Some(win) => format!("{:?}", win),
+                    Some(win) => win.to_string(),
                     None => String::new(),
                 };
                 egui::ComboBox::from_label("Add Window")
                     .selected_text(selected_text)
                     .show_ui(ui, |ui| {
                         for win in AddWindowChoice::iter() {
-                            let text = format!("{:?}", win);
+                            let text = win.to_string();
                             ui.selectable_value(&mut overlay.window_state.settings.add_window, Some(win), text);
                         }
                     });

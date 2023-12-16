@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::OverlayOptions;
 
-use super::{show_dive_selection_box, show_combat_selection_box, WindowDisplay, DamageTotalsMode};
+use super::{show_dive_selection_box, show_combat_selection_box, WindowDisplay, DamageTotalsMode, DiveCombatSplit};
 
 
 /// Render a selection box for selecting a player, and return the player stats of the selected player
@@ -51,10 +51,7 @@ pub struct IndividualSkillsWindow {
 #[typetag::serde]
 impl WindowDisplay for IndividualSkillsWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
-        ui.horizontal(|ui| {
-           ui.selectable_value(&mut self.mode, DamageTotalsMode::Dive, DamageTotalsMode::Dive.to_string());
-           ui.selectable_value(&mut self.mode, DamageTotalsMode::Combat, DamageTotalsMode::Combat.to_string());
-        });
+        self.mode_selection(ui);
 
         let player_stats = match self.mode {
             DamageTotalsMode::Dive => self.handle_per_dive(ui, data),
@@ -68,12 +65,22 @@ impl WindowDisplay for IndividualSkillsWindow {
 
     fn name(&self) -> String {
         let mode = self.mode.to_string();
-        let base = format!("{mode} Individual Damage");
+        let base = format!("Skill Totals: {mode}");
         match &self.player {
             Some(p) => format!("{base}: {p}"),
             // TODO: consider naming the window different if self-stats
             None => format!("{base}"),
         }
+    }
+}
+
+impl DiveCombatSplit for IndividualSkillsWindow {
+    fn mode<'a>(&'a mut self) -> &'a mut DamageTotalsMode {
+        &mut self.mode
+    }
+
+    fn set_mode(&mut self, mode: DamageTotalsMode) {
+        self.mode = mode
     }
 }
 
