@@ -7,13 +7,13 @@ use crate::OverlayOptions;
 
 use super::{show_dive_selection_box, show_combat_selection_box, WindowDisplay};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct GroupDamageState {
     pub dive: usize,
     pub combat: usize,
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize, Debug)]
 pub struct GroupCombatWindow {
     #[serde(skip)]
     state: GroupDamageState,
@@ -23,10 +23,6 @@ pub struct GroupCombatWindow {
 impl WindowDisplay for GroupCombatWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
         self.draw_combat_damage_window(ui, options, data);
-    }
-
-    fn id(&self) -> super::WindowId {
-        self.name()
     }
 
     fn name(&self) -> String {
@@ -61,7 +57,7 @@ impl GroupCombatWindow {
 }
 
 // TODO: Consider merging these somehow
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize, Debug)]
 pub struct GroupDiveWindow {
     #[serde(skip)]
     state: GroupDamageState,
@@ -71,10 +67,6 @@ pub struct GroupDiveWindow {
 impl WindowDisplay for GroupDiveWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
         self.draw_dive_damage_window(ui, options, data);
-    }
-
-    fn id(&self) -> super::WindowId {
-        self.name()
     }
 
     fn name(&self) -> String {

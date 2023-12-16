@@ -4,7 +4,7 @@ use egui::{Visuals, Pos2, ViewportBuilder, ViewportCommand};
 use inkbound_parser::parser::DataLog;
 use serde::de::DeserializeOwned;
 
-use crate::{windows::{self, WindowDisplay, WindowId}, options::OverlayOptions};
+use crate::{windows::{self, WindowDisplay, WindowId, OverlayWindow}, options::OverlayOptions};
 
 static OPTIONS_STORAGE_KEY: &'static str = "overlayoptions";
 static WINDOWS_STORAGE_KEY: &'static str = "overlaywindows";
@@ -12,6 +12,7 @@ static ENABLED_WINDOWS_STORAGE_KEY: &'static str = "overlayenabledwindows";
 
 #[derive(Default)]
 pub struct WindowState {
+    pub settings: windows::SettingsState,
     pub color_settings: windows::ColorSettingsState,
     #[cfg(feature = "auto_update")]
     pub update: crate::updater::UpdateState,
@@ -22,18 +23,20 @@ pub struct Overlay {
     pub datalog: Arc<RwLock<DataLog>>,
     pub window_state: WindowState,
     pub options: OverlayOptions,
-    pub windows: BTreeMap<WindowId, Box<dyn WindowDisplay>>,
+    pub windows: BTreeMap<WindowId, OverlayWindow>,
     pub enabled_windows: BTreeSet<WindowId>,
 }
 
-pub fn default_windows() -> BTreeMap<WindowId, Box<dyn WindowDisplay>> {
-    let windows: Vec<Box<dyn WindowDisplay>> = vec![
-        Box::new(crate::windows::GroupCombatWindow::default()),
-        Box::new(crate::windows::GroupDiveWindow::default()),
-        Box::new(crate::windows::IndividualCombatWindow::default()),
-        Box::new(crate::windows::IndividualDiveWindow::default()),
-        Box::new(crate::windows::HistoryWindow::default()),
+pub fn default_windows() -> BTreeMap<WindowId, OverlayWindow> {
+    use crate::windows::*;
+    let windows = vec![
+        OverlayWindow::new::<GroupCombatWindow>(),
+        OverlayWindow::new::<GroupDiveWindow>(),
+        OverlayWindow::new::<IndividualCombatWindow>(),
+        OverlayWindow::new::<IndividualDiveWindow>(),
+        OverlayWindow::new::<HistoryWindow>(),
     ];
+
     windows.into_iter().map(|e| (e.id(), e)).collect()
 }
 
@@ -77,7 +80,7 @@ impl Overlay {
             (default_windows(), BTreeSet::new())
         } else {
             // Otherwise handle the rest of the loads
-            let windows: BTreeMap<WindowId, Box<dyn WindowDisplay>> = load_from_storage(_cc.storage, WINDOWS_STORAGE_KEY).unwrap_or_default();
+            let windows: BTreeMap<WindowId, OverlayWindow> = load_from_storage(_cc.storage, WINDOWS_STORAGE_KEY).unwrap_or_default();
             let enabled_windows = load_from_storage(_cc.storage, ENABLED_WINDOWS_STORAGE_KEY).unwrap_or_default();
             (windows, enabled_windows)
         };
@@ -118,6 +121,10 @@ impl eframe::App for Overlay {
 
     // TODO: factor out a helper
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        // Filter out any "enabled" window IDs that no longer exist in the definition table
+        //  This is mostly to clean up potentially stale IDs after a version update
+        self.enabled_windows.retain(|w| self.windows.contains_key(w));
+
         match ron::to_string(&self.options) {
             Ok(options) => storage.set_string(OPTIONS_STORAGE_KEY, options),
             Err(e) => log::error!("failed to serialize options: {:?}", e),
@@ -183,16 +190,37 @@ pub fn draw_overlay(overlay: &mut Overlay, ctx: &egui::Context) {
         //  update clone only if data changed, etc
         overlay.datalog.read().unwrap().clone()
     };
+
     windows::draw_settings_window(overlay, ctx);
-    // windows::draw_dive_individual_damage_window(overlay, ctx, &datalog);
-    // windows::draw_combat_individual_damage_window(overlay, ctx, &datalog);
+
+    let style = ctx.style();
     for (id, window) in overlay.windows.iter_mut() {
         if overlay.enabled_windows.contains(id) {
-            // TODO: use window.id() as the egui window id
             let mut open = true;
-            egui::Window::new(window.name()).open(&mut open).show(ctx, |ui| {
-                window.show(ui, &overlay.options, &datalog);
-            });
+
+            // If hovering over this window in the settings menu, highlight the frame with a shadow
+            let frame = match (overlay.window_state.settings.highlight_window.inner_eq(id), &overlay.window_state.settings.highlight_window) {
+                (true, windows::HighlightWindow::Toggle(_)) =>
+                    egui::Frame::window(&style)
+                        .shadow(egui::epaint::Shadow { extrusion: 5.0, color: egui::Color32::WHITE}),
+                (true, windows::HighlightWindow::Delete(_)) =>
+                    egui::Frame::window(&style)
+                        .shadow(egui::epaint::Shadow { extrusion: 5.0, color: egui::Color32::RED}),
+                (true, windows::HighlightWindow::None) => {
+                    log::error!("somehow inner_eq returned true with this set to None");
+                    egui::Frame::window(&style)
+                },
+                (false, _) => egui::Frame::window(&style),
+            };
+
+            egui::Window::new(window.name())
+                .id(egui::Id::new(window.id()))
+                .open(&mut open)
+                .frame(frame)
+                .show(ctx, |ui| {
+                    window.show(ui, &overlay.options, &datalog);
+                });
+
             if !open {
                 overlay.enabled_windows.remove(id);
             }

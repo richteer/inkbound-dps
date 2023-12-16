@@ -10,6 +10,7 @@ pub use group_damage::*;
 mod history;
 pub use history::*;
 
+use serde::{Deserialize, Serialize};
 use inkbound_parser::parser::DataLog;
 
 use crate::OverlayOptions;
@@ -17,9 +18,9 @@ use crate::OverlayOptions;
 pub type WindowId = String;
 
 #[typetag::serde(tag = "type")]
-pub trait WindowDisplay {
+pub trait WindowDisplay: std::fmt::Debug {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog);
-    fn id(&self) -> WindowId;
+    // fn id(&self) -> WindowId;
     fn name(&self) -> String;
 }
 
@@ -30,6 +31,39 @@ pub fn inverted_number_label(current: usize, total: usize) -> String {
     } else {
         ""
     })
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OverlayWindow {
+    pub id: WindowId,
+    pub window: Box<dyn WindowDisplay>,
+}
+
+impl OverlayWindow {
+    pub fn new<T: WindowDisplay + Default + 'static>() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            window: Box::new(T::default()),
+        }
+    }
+}
+
+// Convenience passthrough, since most operations will really be on the window anyway
+#[typetag::serde]
+impl WindowDisplay for OverlayWindow {
+    fn show(&mut self,ui: &mut egui::Ui,options: &OverlayOptions,data: &DataLog) {
+        self.window.show(ui, options, data);
+    }
+
+    fn name(&self) -> String {
+        self.window.name()
+    }
+}
+
+impl OverlayWindow {
+    pub fn id(&self) -> WindowId {
+        self.id.clone()
+    }
 }
 
 pub fn show_dive_selection_box(ui: &mut egui::Ui, dive_state: &mut usize, num_dives: usize) {

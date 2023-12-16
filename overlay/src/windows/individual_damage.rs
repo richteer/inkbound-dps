@@ -9,14 +9,14 @@ use crate::OverlayOptions;
 
 use super::{show_dive_selection_box, show_combat_selection_box, WindowDisplay};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct IndividualDamageState {
     pub player: Option<String>,
     pub dive: usize,
     pub combat: usize,
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize, Debug)]
 pub struct IndividualDiveWindow {
     #[serde(skip)]
     state: IndividualDamageState,
@@ -28,12 +28,12 @@ impl WindowDisplay for IndividualDiveWindow {
         self.draw_dive_individual_damage_window(ui, options, data);
     }
 
-    fn id(&self) -> super::WindowId {
-        self.name()
-    }
-
     fn name(&self) -> String {
-        "Dive Individual Damage".to_string()
+        let base = "Dive Individual Damage";
+        match &self.state.player {
+            Some(p) => format!("{base}: {p}"),
+            None => format!("{base}"),
+        }
     }
 }
 
@@ -70,7 +70,7 @@ impl IndividualDiveWindow {
     }
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize, Debug)]
 pub struct IndividualCombatWindow {
     #[serde(skip)]
     state: IndividualDamageState,
@@ -82,12 +82,12 @@ impl WindowDisplay for IndividualCombatWindow {
         self.draw_combat_individual_damage_window(ui, options, data);
     }
 
-    fn id(&self) -> super::WindowId {
-        self.name()
-    }
-
     fn name(&self) -> String {
-        "Combat Individual Damage".to_string()
+        let base = "Combat Individual Damage";
+        match &self.state.player {
+            Some(p) => format!("{base}: {p}"),
+            None => format!("{base}"),
+        }
     }
 }
 

@@ -2,24 +2,122 @@ use std::collections::BTreeMap;
 
 use egui::{Window, Color32};
 use inkbound_parser::aspects::Aspect;
-use strum::IntoEnumIterator;
+use strum::{IntoEnumIterator, EnumIter};
 
 use crate::{Overlay, DefaultColor};
 
+use super::{WindowDisplay, OverlayWindow, WindowId};
+
+#[derive(Debug, Default)]
+pub enum HighlightWindow {
+    #[default]
+    None,
+    Toggle(WindowId),
+    Delete(WindowId),
+}
+
+impl HighlightWindow {
+    pub fn inner_eq(&self, other: &WindowId) -> bool {
+        match self {
+            HighlightWindow::None => false,
+            HighlightWindow::Toggle(wid) => wid == other,
+            HighlightWindow::Delete(wid) => wid == other,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct SettingsState {
+    add_window: Option<AddWindowChoice>,
+    pub highlight_window: HighlightWindow,
+}
+
+#[derive(EnumIter, Debug, PartialEq, Eq)]
+enum AddWindowChoice {
+    GroupCombat,
+    GroupDive,
+    IndividualCombat,
+    IndividualDive,
+    History,
+}
+
+impl From<&AddWindowChoice> for OverlayWindow {
+    fn from(value: &AddWindowChoice) -> Self {
+        use super::*;
+        match value {
+            AddWindowChoice::GroupCombat => OverlayWindow::new::<GroupCombatWindow>(),
+            AddWindowChoice::GroupDive => OverlayWindow::new::<GroupDiveWindow>(),
+            AddWindowChoice::IndividualCombat => OverlayWindow::new::<IndividualCombatWindow>(),
+            AddWindowChoice::IndividualDive => OverlayWindow::new::<IndividualDiveWindow>(),
+            AddWindowChoice::History => OverlayWindow::new::<HistoryWindow>(),
+        }
+    }
+}
 
 pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
     Window::new("Settings")
         .show(ctx, |ui| {
             ui.heading("Windows");
-            for (id, window) in overlay.windows.iter() {
-                let mut open = overlay.enabled_windows.contains(id);
-                if ui.checkbox(&mut open, window.name()).clicked() {
-                    match open {
-                        true => overlay.enabled_windows.insert(id.clone()),
-                        false => overlay.enabled_windows.remove(id),
+
+            overlay.window_state.settings.highlight_window = HighlightWindow::None;
+            // Prep the queue for deleting windows
+            let mut delete_windows = Vec::new();
+            // Pre-sort by name, purely for aesthetic reasons
+            let mut sorted_windows = overlay.windows.iter().collect::<Vec<(&String, &OverlayWindow)>>();
+            sorted_windows.sort_by_key(|f| f.1.name());
+            for (id, window) in sorted_windows.into_iter() {
+                ui.horizontal(|ui| {
+                    let delbutton = egui::Label::new("♻").sense(egui::Sense::click());
+                    let delbutton = ui.add(delbutton);
+                    if delbutton.clicked() {
+                        delete_windows.push(id.clone());
+                    }
+                    if delbutton.hovered() {
+                        overlay.window_state.settings.highlight_window = HighlightWindow::Delete(id.clone());
+                    }
+                    let mut open = overlay.enabled_windows.contains(id);
+                    let cbox = ui.checkbox(&mut open, window.name());
+                    if cbox.clicked() {
+                        match open {
+                            true => overlay.enabled_windows.insert(id.clone()),
+                            false => overlay.enabled_windows.remove(id),
+                        };
                     };
-                };
+                    if cbox.hovered() {
+                        overlay.window_state.settings.highlight_window = HighlightWindow::Toggle(id.clone());
+                    }
+                });
             }
+
+            // Consider having the overlay update method do this if there are more delayed commands to implement
+            for wid in delete_windows.into_iter() {
+                overlay.windows.remove(&wid);
+                overlay.enabled_windows.remove(&wid);
+            }
+
+            ui.horizontal(|ui| {
+                if ui.button("➕").clicked() {
+                    if let Some(win) = &overlay.window_state.settings.add_window {
+                        let empty: OverlayWindow = win.into();
+                        overlay.enabled_windows.insert(empty.id());
+                        overlay.windows.insert(empty.id(), empty);
+                    }
+                }
+
+                let selected_text = match &overlay.window_state.settings.add_window {
+                    Some(win) => format!("{:?}", win),
+                    None => String::new(),
+                };
+                egui::ComboBox::from_label("Add Window")
+                    .selected_text(selected_text)
+                    .show_ui(ui, |ui| {
+                        for win in AddWindowChoice::iter() {
+                            let text = format!("{:?}", win);
+                            ui.selectable_value(&mut overlay.window_state.settings.add_window, Some(win), text);
+                        }
+                    });
+            });
+            ui.separator();
             if ui.button("Reset Default Windows").clicked() {
                 overlay.windows = crate::overlay::default_windows();
             }

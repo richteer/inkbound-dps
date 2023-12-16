@@ -6,9 +6,9 @@ use strum::{IntoEnumIterator, EnumIter};
 
 use crate::{options::ColorOptions, OverlayOptions};
 
-use super::{show_dive_selection_box, WindowDisplay, WindowId};
+use super::{show_dive_selection_box, WindowDisplay};
 
-#[derive(Default, PartialEq, Serialize, Deserialize)]
+#[derive(Default, PartialEq, Serialize, Deserialize, Debug)]
 pub enum HistoryMode {
     #[default]
     Split,
@@ -25,12 +25,12 @@ impl std::fmt::Display for HistoryMode {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct HistoryState {
     pub dive: usize,
 }
 
-#[derive(Default, Serialize, Deserialize, EnumIter, PartialEq, Eq, Clone, Copy)]
+#[derive(Default, Debug, Serialize, Deserialize, EnumIter, PartialEq, Eq, Clone, Copy)]
 pub enum BarOrder {
     AscendingDamage,
     #[default]
@@ -50,7 +50,7 @@ impl std::fmt::Display for BarOrder {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(default)]
 // TODO: Re-persist these
 pub struct HistoryOptions {
@@ -75,7 +75,7 @@ impl Default for HistoryOptions {
     }
 }
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Default, Deserialize, Serialize, Debug)]
 pub struct HistoryWindow {
     pub options: HistoryOptions,
     #[serde(skip)]
@@ -86,10 +86,6 @@ pub struct HistoryWindow {
 impl WindowDisplay for HistoryWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
         self.draw_history_window_new(ui, options, data);
-    }
-
-    fn id(&self) -> WindowId {
-        self.name()
     }
 
     fn name(&self) -> String {
