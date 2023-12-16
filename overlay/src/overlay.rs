@@ -32,8 +32,7 @@ pub fn default_windows() -> BTreeMap<WindowId, OverlayWindow> {
     let windows = vec![
         OverlayWindow::new::<GroupCombatWindow>(),
         OverlayWindow::new::<GroupDiveWindow>(),
-        OverlayWindow::new::<IndividualCombatWindow>(),
-        OverlayWindow::new::<IndividualDiveWindow>(),
+        OverlayWindow::new::<IndividualSkillsWindow>(),
         OverlayWindow::new::<HistoryWindow>(),
     ];
 

@@ -34,9 +34,9 @@ pub struct SettingsState {
 
 #[derive(EnumIter, Debug, PartialEq, Eq)]
 enum AddWindowChoice {
-    GroupCombat,
+    // GroupCombat,
     GroupDive,
-    IndividualCombat,
+    // IndividualCombat,
     IndividualDive,
     History,
 }
@@ -45,10 +45,10 @@ impl From<&AddWindowChoice> for OverlayWindow {
     fn from(value: &AddWindowChoice) -> Self {
         use super::*;
         match value {
-            AddWindowChoice::GroupCombat => OverlayWindow::new::<GroupCombatWindow>(),
+            // AddWindowChoice::GroupCombat => OverlayWindow::new::<GroupCombatWindow>(),
             AddWindowChoice::GroupDive => OverlayWindow::new::<GroupDiveWindow>(),
-            AddWindowChoice::IndividualCombat => OverlayWindow::new::<IndividualCombatWindow>(),
-            AddWindowChoice::IndividualDive => OverlayWindow::new::<IndividualDiveWindow>(),
+            // AddWindowChoice::IndividualCombat => OverlayWindow::new::<IndividualCombatWindow>(),
+            AddWindowChoice::IndividualDive => OverlayWindow::new::<IndividualSkillsWindow>(),
             AddWindowChoice::History => OverlayWindow::new::<HistoryWindow>(),
         }
     }

@@ -1,4 +1,5 @@
 mod settings;
+
 pub use settings::*;
 
 mod individual_damage;
@@ -85,5 +86,24 @@ pub fn show_combat_selection_box(ui: &mut egui::Ui, combat_state: &mut usize, nu
             }
         });
 }
+
+
+/// Helper Enum for windows that want to select between per-combat and per-dive modes
+#[derive(Default, Deserialize, Serialize, Debug, PartialEq)]
+enum DamageTotalsMode {
+    #[default]
+    Dive,
+    Combat,
+}
+
+impl std::fmt::Display for DamageTotalsMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            DamageTotalsMode::Dive => "Dive",
+            DamageTotalsMode::Combat => "Combat",
+        })
+    }
+}
+
 
 static NO_DATA_MSG: &'static str = "Waiting for data...";
