@@ -100,5 +100,6 @@ pub enum Event {
     // RegisterPlayer(String, String, String),
     NextTurn(String),
     OrbPickup(String, PlayerData),
+    SetSelf(String, String),
     // Unknown(String),
 }

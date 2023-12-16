@@ -87,16 +87,15 @@ impl DiveLog {
 
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, Default)]
 pub struct DataLog {
     pub dives: Vec<DiveLog>,
+    pub pov: Option<String>,
 }
 
 impl DataLog {
     pub fn new() -> Self {
-        Self {
-            dives: Vec::new()
-        }
+        Self::default()
     }
 
     pub fn handle_event(&mut self, event: Event) {
@@ -105,6 +104,7 @@ impl DataLog {
                 debug!("starting new dive");
                 self.dives.insert(0, DiveLog::new())
             },
+            Event::SetSelf(_, name) => self.pov = Some(name),
             _ => {
                 // debug!("propogating event: {:?}", event);
                 if let Some(dive) = self.dives.get_mut(0) {

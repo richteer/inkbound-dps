@@ -93,6 +93,9 @@ impl LogParser {
         else if let Some(caps) = regex_captures!(r"PlayerUnitHandle:\(EntityHandle:(\d+)\).*PickupData\-ManaOrbPickup", line) {
             ParseEvent::Internal(InternalEvent::OrbPickup(line.to_string(), Entity::Id(caps.1.parse().unwrap())))
         }
+        else if let Some(caps) = regex_captures!(r"Joining hub.*characterName: (.*), partyId", line) {
+            ParseEvent::Parsed(Event::SetSelf(line.to_string(), caps.1.to_string()))
+        }
         else if regex_is_match!(r"Party run start triggered", line) {
             ParseEvent::Parsed(Event::StartDive(line.to_string()))
         }
@@ -191,7 +194,7 @@ mod tests {
     static L_NEXT_TURN: &'static str = "0T23:45:57 21 I Evaluating quest progress for (EntityHandle:16) with 101 active quests. Record variable: QuestObjective_TurnCount";
     static L_REGISTER_NAME: &'static str = "0T23:17:51 66 I TestPlayer (EntityHandle:22) is playing ability AbilityData-Flurry_AbilityData (Flurry my7gMbFo)";
     static L_ORB_PICKUP: &'static str = "0T00:51:46 18 I [EventSystem] broadcasting EventOnPickupActivated-WorldStateChangePickupActivated-PlayerUnitHandle:(EntityHandle:9)-PickupHandle:(EntityHandle:95)-PickupData:PickupData-ManaOrbPickup (PickupData_pickupName-taadPy97-ccebe8a3bf921d043ac03a49bce8019f LzTNf24V)";
-
+    static L_SET_SELF: &'static str = "0T00:44:47 45 I Joining hub - characterId: 00000000000, characterName: TestName, partyId: 392f1b98-4d51-4379-8624-72cce1bab72b";
     #[test]
     fn parse_damage_line() {
         let damage_lines = vec![
@@ -333,6 +336,20 @@ mod tests {
 
         match line {
             ParseEvent::Internal(InternalEvent::OrbPickup(_, id)) => assert_eq!(id, Entity::Id(9)),
+            _ => {
+                println!("received {:?}", line);
+                assert!(false);
+            }
+        }
+    }
+
+    #[test]
+    fn parse_set_self() {
+        let mut parser = LogParser::new();
+        let line = parser.do_parse(L_SET_SELF);
+
+        match line {
+            ParseEvent::Parsed(Event::SetSelf(_, name)) => assert_eq!(name, "TestName".to_string()),
             _ => {
                 println!("received {:?}", line);
                 assert!(false);
