@@ -157,24 +157,28 @@ impl eframe::App for Overlay {
                 pointer_pos.y /= ctx.pixels_per_point();
 
                 // Get window position in egui points
-                // TODO: remove unwrap
-                let window_pos = ctx.input(|i| i.viewport().inner_rect.unwrap().min);
+                let window_pos = ctx.input(|i| i.viewport().inner_rect);
+                // Do nothing if window_pos is none, probably because the window is minimized
+                if let Some(window_pos) = window_pos {
+                    let window_pos = window_pos.min;
 
-                // Adjust absolute pointer pos to egui relative position
-                pointer_pos -= window_pos.to_vec2();
+                    // Adjust absolute pointer pos to egui relative position
+                    pointer_pos -= window_pos.to_vec2();
 
-                #[cfg(debug_assertions)]
-                if let Some(pos) = ctx.input(|i| i.pointer.latest_pos()) {
-                    // For debugging when the mouse is slightly offset for some reason
-                    log::trace!("pos - pointer_pos = {:?}", pos - pointer_pos);
-                };
-                if ctx.is_pos2_over_area(pointer_pos) {
-                    log::trace!("is over area, disabling passthrough");
-                    ctx.send_viewport_cmd(ViewportCommand::MousePassthrough(false));
-                } else {
-                    log::trace!("enabling passthrough");
-                    ctx.send_viewport_cmd(ViewportCommand::MousePassthrough(true));
+                    #[cfg(debug_assertions)]
+                    if let Some(pos) = ctx.input(|i| i.pointer.latest_pos()) {
+                        // For debugging when the mouse is slightly offset for some reason
+                        log::trace!("pos - pointer_pos = {:?}", pos - pointer_pos);
+                    };
+                    if ctx.is_pos2_over_area(pointer_pos) {
+                        log::trace!("is over area, disabling passthrough");
+                        ctx.send_viewport_cmd(ViewportCommand::MousePassthrough(false));
+                    } else {
+                        log::trace!("enabling passthrough");
+                        ctx.send_viewport_cmd(ViewportCommand::MousePassthrough(true));
+                    }
                 }
+
             },
             Mouse::Error => log::error!("error getting mouse position"),
         }
