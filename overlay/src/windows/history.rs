@@ -85,7 +85,7 @@ pub struct HistoryWindow {
 #[typetag::serde]
 impl WindowDisplay for HistoryWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
-        self.draw_history_window_new(ui, options, data);
+        self.draw_history_window(ui, options, data);
     }
 
     fn name(&self) -> String {
@@ -160,35 +160,37 @@ fn generate_stacked_bars(dive: &DiveLog, bar_width: f64, show_stacked_totals: bo
 
 impl HistoryWindow {
 
-    pub fn draw_history_window_new(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, datalog: &DataLog) {
-        show_dive_selection_box(ui, &mut self.state.dive, datalog.dives.len());
-        egui::ComboBox::from_label("Mode")
-            .selected_text(self.options.mode.to_string())
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut self.options.mode, HistoryMode::Split, "Split");
-                ui.selectable_value(&mut self.options.mode, HistoryMode::Stacked, "Stacked");
-            })
-            .response.on_hover_text("Select which mode to render the history plot.\n\nSplit - Each player has their own vertical bar grouped by combat.\nStacked - Player damage bars are stacked on top of each other, with the total length of the bar representing total group damage.");
+    pub fn draw_history_window(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, datalog: &DataLog) {
+        ui.collapsing("⛭", |ui| {
+            show_dive_selection_box(ui, &mut self.state.dive, datalog.dives.len());
+            egui::ComboBox::from_label("Mode")
+                .selected_text(self.options.mode.to_string())
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.options.mode, HistoryMode::Split, "Split");
+                    ui.selectable_value(&mut self.options.mode, HistoryMode::Stacked, "Stacked");
+                })
+                .response.on_hover_text("Select which mode to render the history plot.\n\nSplit - Each player has their own vertical bar grouped by combat.\nStacked - Player damage bars are stacked on top of each other, with the total length of the bar representing total group damage.");
 
-        egui::ComboBox::from_label("Bar Order")
-            .selected_text(self.options.bar_order.to_string())
-            .show_ui(ui, |ui|{
-                BarOrder::iter().for_each(|e| { ui.selectable_value(&mut self.options.bar_order, e, e.to_string()); })
-            }).response.on_hover_text("The order that the bars will be rendered.\n\nIn split mode, ascending(⬆) is left to right.\nIn stacked mode, ascending(⬆) is bottom-up.");
+            egui::ComboBox::from_label("Bar Order")
+                .selected_text(self.options.bar_order.to_string())
+                .show_ui(ui, |ui|{
+                    BarOrder::iter().for_each(|e| { ui.selectable_value(&mut self.options.bar_order, e, e.to_string()); })
+                }).response.on_hover_text("The order that the bars will be rendered.\n\nIn split mode, ascending(⬆) is left to right.\nIn stacked mode, ascending(⬆) is bottom-up.");
 
-        match self.options.mode {
-            HistoryMode::Split => {
-                ui.add(egui::Slider::new(&mut self.options.group_bar_width, 0.25..=1.0)
-                    .max_decimals(2)
-                    .text("Bar Group Width"));
-            },
-            HistoryMode::Stacked => {
-                ui.add(egui::Slider::new(&mut self.options.stacked_bar_width, 0.25..=1.0)
-                    .max_decimals(2)
-                    .text("Bar Width"));
-                ui.checkbox(&mut self.options.stacked_show_totals, "Show Totals");
-            },
-        }
+            match self.options.mode {
+                HistoryMode::Split => {
+                    ui.add(egui::Slider::new(&mut self.options.group_bar_width, 0.25..=1.0)
+                        .max_decimals(2)
+                        .text("Bar Group Width"));
+                },
+                HistoryMode::Stacked => {
+                    ui.add(egui::Slider::new(&mut self.options.stacked_bar_width, 0.25..=1.0)
+                        .max_decimals(2)
+                        .text("Bar Width"));
+                    ui.checkbox(&mut self.options.stacked_show_totals, "Show Totals");
+                },
+            }
+        });
 
         ui.separator();
 

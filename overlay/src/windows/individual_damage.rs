@@ -2,37 +2,13 @@ use std::collections::HashMap;
 
 use egui::Ui;
 use egui_plot::{Plot, BarChart, Bar, Text, PlotPoint};
-use inkbound_parser::parser::{PlayerStats, DataLog, CombatLog};
+use inkbound_parser::parser::{PlayerStats, DataLog};
 use serde::{Deserialize, Serialize};
 
 use crate::OverlayOptions;
 
-use super::{show_dive_selection_box, show_combat_selection_box, WindowDisplay, DamageTotalsMode, DiveCombatSplit};
+use super::{WindowDisplay, DamageTotalsMode, DiveCombatSplit, DiveCombatSelectionState, PlayerSelection, PlayerDiveCombatOptions};
 
-
-/// Render a selection box for selecting a player, and return the player stats of the selected player
-///  Defaults to the POV character, if the POV is set and exists in the log
-///  Candidate to be moved into window/mod.rs if any other window needs this
-fn get_player_selection<'a>(ui: &mut egui::Ui, selection: &mut Option<String>, players: &'a HashMap<String, PlayerStats>, pov: &Option<String>) -> Option<&'a PlayerStats> {
-    egui::ComboBox::from_label("Select Player")
-            .selected_text(format!("{}", selection.as_ref().unwrap_or(&"".to_string())))
-            .show_ui(ui, |ui| {
-                // Assumes None -> pov character. Probably could be improved, especially if POV detection fails
-                ui.selectable_value(selection, None, "YOU");
-                for player in players.keys() {
-                    ui.selectable_value(selection, Some(player.clone()), player);
-                }
-            }
-        );
-
-    if let Some(selection) = selection {
-        players.get(selection)
-    } else if let Some(pov) = pov {
-        players.get(pov)
-    } else {
-        None
-    }
-}
 
 #[derive(Default, Debug)]
 pub struct IndividualDamageState {
@@ -43,19 +19,50 @@ pub struct IndividualDamageState {
 #[derive(Default, Deserialize, Serialize, Debug)]
 pub struct IndividualSkillsWindow {
     #[serde(skip)]
-    state: IndividualDamageState,
+    state: DiveCombatSelectionState,
     mode: DamageTotalsMode,
     player: Option<String>,
+}
+
+impl PlayerSelection for IndividualSkillsWindow {
+    fn player<'a>(&'a mut self) -> &'a mut Option<String> {
+        &mut self.player
+    }
+}
+
+impl DiveCombatSplit for IndividualSkillsWindow {
+    fn mode<'a>(&'a mut self) -> &'a mut DamageTotalsMode {
+        &mut self.mode
+    }
+
+    fn set_mode(&mut self, mode: DamageTotalsMode) {
+        self.mode = mode
+    }
+
+    fn state<'a>(&'a mut self) -> &'a mut super::DiveCombatSelectionState {
+        &mut self.state
+    }
 }
 
 #[typetag::serde]
 impl WindowDisplay for IndividualSkillsWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
-        self.mode_selection(ui);
+        self.show_options(ui, data);
 
-        let player_stats = match self.mode {
-            DamageTotalsMode::Dive => self.handle_per_dive(ui, data),
-            DamageTotalsMode::Combat => self.handle_per_combat(ui, data),
+        let player_stats = self.get_current_player_stat_list(data);
+        let player_stats = if let Some(player_stats) = player_stats {
+            player_stats
+        } else {
+            ui.label(super::NO_DATA_MSG.to_string());
+            return;
+        };
+
+        let player_stats = if let Some(selection) = self.player.as_ref() {
+            player_stats.get(selection)
+        } else if let Some(pov) = data.pov.as_ref() {
+            player_stats.get(pov)
+        } else {
+            None
         };
 
         if let Some(player_stats) = player_stats {
@@ -74,16 +81,6 @@ impl WindowDisplay for IndividualSkillsWindow {
     }
 }
 
-impl DiveCombatSplit for IndividualSkillsWindow {
-    fn mode<'a>(&'a mut self) -> &'a mut DamageTotalsMode {
-        &mut self.mode
-    }
-
-    fn set_mode(&mut self, mode: DamageTotalsMode) {
-        self.mode = mode
-    }
-}
-
 #[inline]
 fn clean_skill_name<'a>(name: &String) -> String {
     name
@@ -97,41 +94,6 @@ fn clean_skill_name<'a>(name: &String) -> String {
 
 
 impl IndividualSkillsWindow {
-    fn handle_per_dive<'a>(&mut self, ui: &mut Ui, datalog: &'a DataLog) -> Option<&'a PlayerStats> {
-        let player_stats = if let Some(dive) = datalog.dives.get(self.state.dive) {
-            &dive.player_stats.player_stats
-        } else {
-            ui.label(crate::windows::NO_DATA_MSG);
-            return None;
-        };
-
-        show_dive_selection_box(ui, &mut self.state.dive, datalog.dives.len());
-
-        get_player_selection(ui, &mut self.player, player_stats, &datalog.pov)
-    }
-
-    fn handle_per_combat<'a>(&mut self, ui: &mut egui::Ui, datalog: &'a DataLog) -> Option<&'a PlayerStats> {
-        let combats: &Vec<CombatLog> = {
-            if let Some(dive) = datalog.dives.get(self.state.dive) {
-                &dive.combats
-            } else {
-                ui.label(crate::windows::NO_DATA_MSG);
-                return None;
-            }
-        };
-
-        show_dive_selection_box(ui, &mut self.state.dive, datalog.dives.len());
-        show_combat_selection_box(ui, &mut self.state.combat, combats.len());
-
-        let player_stats = if let Some(combat) = combats.get(self.state.combat) {
-            &combat.player_stats.player_stats
-        } else {
-            return None;
-        };
-
-        get_player_selection(ui, &mut self.player, player_stats, &datalog.pov)
-    }
-
     /// Draw the bar plot for the individual skills given the player stats data
     #[inline]
     fn draw_individual_damage_plot(&self, ui: &mut Ui, player_stats: &PlayerStats, options: &OverlayOptions) {
