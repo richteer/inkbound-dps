@@ -95,7 +95,12 @@ fn main() {
         .arg(arg!(-s --"skip-current" "Skip over parsing current log file")
             .required(false)
             .action(clap::ArgAction::SetTrue)
-        );
+        )
+        .arg(arg!(-w --windowed "Render in a window instead of as a borderless fullscreen overlay")
+            .required(false)
+            .action(clap::ArgAction::SetTrue)
+        )
+    ;
 
     #[cfg(feature = "auto_update")]
     let matches = matches
@@ -148,7 +153,7 @@ fn main() {
     {
         let datalog = datalog.clone();
         let parser = parser.clone();
-        let skip = *matches.get_one("skip-current").unwrap_or(&false);
+        let skip = matches.get_flag("skip-current");
 
         std::thread::spawn(move || {
             if skip {
@@ -201,7 +206,16 @@ fn main() {
     let mut watcher = notify::PollWatcher::new(tx, notify::Config::default().with_poll_interval(Duration::from_secs(2))).unwrap();
     watcher.watch(Path::new(filepath.as_str()), RecursiveMode::NonRecursive).unwrap();
 
-    overlay::spawn_overlay(datalog);
+    #[cfg(not(debug_assertions))]
+    let mode = if matches.get_flag("windowed"){
+        overlay::OverlayMode::WindowedOverlay
+    } else {
+        overlay::OverlayMode::Overlay
+    };
+    // Just always use windowed mode in debug builds
+    #[cfg(debug_assertions)]
+    let mode = overlay::OverlayMode::WindowedOverlay;
+    overlay::spawn_overlay(datalog, mode);
 
     // Overlay closed, exit and clean-up
     drop(watcher); // Drop to close the watch recv thread loop

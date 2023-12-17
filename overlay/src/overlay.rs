@@ -232,35 +232,28 @@ pub fn draw_overlay(overlay: &mut Overlay, ctx: &egui::Context) {
     }
 }
 
+#[derive(Default)]
+pub enum OverlayMode {
+    #[default]
+    Overlay,
+    WindowedOverlay,
+    // TODO: Actual windowed mode?
+}
 
 /// Entrypoint for the main application to spawn the actual overlay window and such
-pub fn spawn_overlay(datalog: Arc<RwLock<DataLog>>) {
-    // Common options to release and debug
-    let viewport = ViewportBuilder::default()
-        .with_transparent(true)
-    ;
+pub fn spawn_overlay(datalog: Arc<RwLock<DataLog>>, mode: OverlayMode) {
+    let viewport = match mode {
+        OverlayMode::Overlay =>
+            ViewportBuilder::default()
+                .with_decorations(false)
+                .with_transparent(true)
+                .with_always_on_top()
+                .with_maximized(true)
+                // Probably unnecessary, but useful to make note of here
+                .with_mouse_passthrough(true),
 
-    // Release mode options
-    #[cfg(not(debug_assertions))]
-    let viewport = {
-        viewport
-            .with_decorations(false)
-            .with_transparent(true)
-            .with_always_on_top()
-            .with_maximized(true)
-            // Probably unnecessary, but useful to make note of here
-            .with_mouse_passthrough(true)
-    };
-
-    // Debug mode options
-    //  Run in a non-maximized window so it doesn't take up the whole dang screen
-    #[cfg(debug_assertions)]
-    let viewport = {
-        viewport
-            .with_decorations(true)
-            .with_transparent(true)
-            // .with_always_on_top()
-            .with_maximized(false)
+        OverlayMode::WindowedOverlay =>
+            ViewportBuilder::default()
     };
 
     let native_options = eframe::NativeOptions {
