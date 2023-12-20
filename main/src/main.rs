@@ -1,4 +1,8 @@
-#![windows_subsystem = "windows"] // Hide terminal on windows
+// Hide terminal on windows release builds
+#![cfg_attr(
+    all(target_os = "windows", not(debug_assertions)),
+    windows_subsystem = "windows"
+)]
 use clap::{command, arg};
 use inkbound_parser::{
     parser::{*},
