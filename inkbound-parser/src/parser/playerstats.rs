@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use serde::Serialize;
 
-use super::{DamageReceivedEventData, DamageDealtEventData, PlayerData};
+use super::{DamageReceivedEventData, DamageDealtEventData, PlayerData, AddStatusEffectData};
 
 /// Ongoing Statistics for a particular Player
 #[derive(Debug, Serialize, Clone)]
@@ -15,6 +15,7 @@ pub struct PlayerStats {
     // Subset of skill_totals that only contains crit damage
     pub crit_totals: HashMap<String, i64>,
     pub orb_pickups: i64,
+    pub status_applied: HashMap<String, i64>,
     // TODO: status effects applied, etc
 }
 
@@ -29,6 +30,7 @@ impl PlayerStats {
             skill_totals: HashMap::new(),
             crit_totals: HashMap::new(),
             orb_pickups: 0,
+            status_applied: HashMap::new(),
         }
     }
 
@@ -49,6 +51,10 @@ impl PlayerStats {
 
     pub fn increment_orbs(&mut self) {
         self.orb_pickups += 1;
+    }
+
+    pub fn apply_status_effects(&mut self, data: AddStatusEffectData) {
+        self.status_applied.entry(data.effectname.clone()).and_modify(|total| *total += data.added).or_insert(data.added);
     }
 }
 
@@ -94,6 +100,19 @@ impl PlayerStatList {
         self.player_stats.entry(player.name.clone())
             .and_modify(|e| e.increment_orbs())
             .or_insert(PlayerStats::new(player));
+    }
+
+    pub fn apply_status_effects(&mut self, data: AddStatusEffectData) {
+        // ugh this clone though
+        match data.clone().source {
+            super::Entity::Id(_) => (), // Only bother if it was a player
+            super::Entity::Player(player) => {
+                self.player_stats.entry(player.name.clone())
+                    .and_modify(|p| p.apply_status_effects(data))
+                    .or_insert(PlayerStats::new(player.clone()))
+                ;
+            }
+        };
     }
 
     // pub fn set_class(&mut self, name: &String, class: String) {

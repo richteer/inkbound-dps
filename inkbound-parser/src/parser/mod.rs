@@ -87,6 +87,23 @@ impl From<DamageEventData> for DamageDirection {
 }
 
 #[derive(PartialEq, Debug, Clone)]
+pub enum TargetUnitTeam {
+    Enemy,
+    Friendly,
+    Unknown(String),
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct AddStatusEffectData {
+    source: Entity,
+    target: Entity,
+    target_team: TargetUnitTeam,
+    effectname: String,
+    added: i64,
+    newvalue: i64,
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub enum Event {
     StartDive(String),
     EndDive(String),
@@ -97,6 +114,7 @@ pub enum Event {
     /// line, name, data
     DamageReceived(String, DamageReceivedEventData),
     DamageOther(String, DamageEventData),
+    AddStatusEffect(String, AddStatusEffectData),
     // RegisterPlayer(String, String, String),
     NextTurn(String),
     OrbPickup(String, PlayerData),

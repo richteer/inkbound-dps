@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::aspects::Aspect;
 
-use super::{Event, DamageEventData, Entity, PlayerData, DamageDirection};
+use super::{Event, DamageEventData, Entity, PlayerData, DamageDirection, AddStatusEffectData};
 
 #[derive(Debug, Serialize)]
 pub struct LogParser {
@@ -14,9 +14,11 @@ pub struct LogParser {
     classes: HashMap<i64, Aspect>, // id -> pre-translated Aspect
 }
 
+
 #[derive(Debug)]
 enum InternalEvent {
     Damage(String, DamageEventData),
+    AddStatusEffect(String, AddStatusEffectData),
     OrbPickup(String, Entity),
     RegisterName(String, i64, String),
     UnitClass(String, i64, String),
@@ -96,6 +98,21 @@ impl LogParser {
         else if let Some(caps) = regex_captures!(r"Joining hub.*characterName: (.*), partyId", line) {
             ParseEvent::Parsed(Event::SetSelf(line.to_string(), caps.1.to_string()))
         }
+        else if let Some(caps) = regex_captures!(r"EventOnUnitStatusEffectStacksAdded.*TargetUnitEntityHandle:\(EntityHandle:(?<target>\d+)\)-CasterUnitEntityHandle:\(EntityHandle:(?<source>\d+)\)-TargetUnitTeam:(?<targetteam>\w+).*StatusEffectData:StatusEffectData-(?<effectname>\w+)_StatusEffect.*StacksAdded:(?<added>\d+)-NewStacksValue:(?<newvalue>\d+)", line) {
+            let (_, target, source, targetteam, effectname, added, newvalue) = caps;
+            ParseEvent::Internal(InternalEvent::AddStatusEffect(line.to_string(), AddStatusEffectData {
+                source: Entity::Id(source.parse().unwrap()),
+                target: Entity::Id(target.parse().unwrap()),
+                target_team: match targetteam {
+                    "Friendly" => super::TargetUnitTeam::Friendly,
+                    "Enemy" => super::TargetUnitTeam::Enemy,
+                    _ => super::TargetUnitTeam::Unknown(targetteam.to_string()),
+                },
+                effectname: effectname.to_string(),
+                added: added.parse().unwrap(),
+                newvalue: newvalue.parse().unwrap(),
+            }))
+        }
         else if regex_is_match!(r"Party run start triggered", line) {
             ParseEvent::Parsed(Event::StartDive(line.to_string()))
         }
@@ -133,6 +150,11 @@ impl LogParser {
             },
             ParseEvent::Internal(InternalEvent::Damage(line, dmg)) => {
                 Some(self.convert_damage(line, dmg))
+            }
+            ParseEvent::Internal(InternalEvent::AddStatusEffect(line, mut data)) => {
+                data.source = data.source.to_player(&self.players, &self.classes);
+                data.target = data.target.to_player(&self.players, &self.classes);
+                Some(Event::AddStatusEffect(line, data))
             }
             ParseEvent::Internal(InternalEvent::OrbPickup(s, id)) => {
                 match id.to_player(&self.players, &self.classes) {
@@ -195,6 +217,8 @@ mod tests {
     static L_REGISTER_NAME: &'static str = "0T23:17:51 66 I TestPlayer (EntityHandle:22) is playing ability AbilityData-Flurry_AbilityData (Flurry my7gMbFo)";
     static L_ORB_PICKUP: &'static str = "0T00:51:46 18 I [EventSystem] broadcasting EventOnPickupActivated-WorldStateChangePickupActivated-PlayerUnitHandle:(EntityHandle:9)-PickupHandle:(EntityHandle:95)-PickupData:PickupData-ManaOrbPickup (PickupData_pickupName-taadPy97-ccebe8a3bf921d043ac03a49bce8019f LzTNf24V)";
     static L_SET_SELF: &'static str = "0T00:44:47 45 I Joining hub - characterId: 00000000000, characterName: TestName, partyId: 392f1b98-4d51-4379-8624-72cce1bab72b";
+    static L_ADD_STATUS: &'static str = "0T03:43:12 98 I [EventSystem] broadcasting EventOnUnitStatusEffectStacksAdded-WorldStateChangeUnitAddStatusEffectStacks-TargetUnitEntityHandle:(EntityHandle:1711)-CasterUnitEntityHandle:(EntityHandle:21)-TargetUnitTeam:Enemy-IsInActiveCombat:True-StatusEffectInstanceHandle:(Handle:3372)-StatusEffectData:StatusEffectData-Burn_StatusEffect (HelperData_titleKey-vdrSrrVG-f73d28c6d6a09c44e9b41ad2b3704826 sXmQNYjg)-StacksAdded:5-NewStacksValue:59";
+
     #[test]
     fn parse_damage_line() {
         let damage_lines = vec![
@@ -350,6 +374,27 @@ mod tests {
 
         match line {
             ParseEvent::Parsed(Event::SetSelf(_, name)) => assert_eq!(name, "TestName".to_string()),
+            _ => {
+                println!("received {:?}", line);
+                assert!(false);
+            }
+        }
+    }
+
+    #[test]
+    fn parse_add_status_effect() {
+        let mut parse = LogParser::new();
+        let line = parse.do_parse(L_ADD_STATUS);
+
+        match line {
+            ParseEvent::Internal(InternalEvent::AddStatusEffect(_, data)) => {
+                assert_eq!(data.source, Entity::Id(21));
+                assert_eq!(data.target, Entity::Id(1711));
+                assert_eq!(data.target_team, TargetUnitTeam::Enemy);
+                assert_eq!(data.effectname, "Burn".to_string());
+                assert_eq!(data.added, 5);
+                assert_eq!(data.newvalue, 59);
+            }
             _ => {
                 println!("received {:?}", line);
                 assert!(false);
