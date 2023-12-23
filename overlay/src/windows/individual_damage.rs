@@ -17,6 +17,7 @@ pub struct IndividualDamageState {
 }
 
 #[derive(Default, Deserialize, Serialize, Debug)]
+#[serde(default)]
 pub struct IndividualSkillsWindow {
     #[serde(skip)]
     state: DiveCombatSelectionState,

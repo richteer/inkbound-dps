@@ -52,7 +52,6 @@ impl std::fmt::Display for BarOrder {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(default)]
-// TODO: Re-persist these
 pub struct HistoryOptions {
     pub show: bool,
     pub mode: HistoryMode,
@@ -77,6 +76,7 @@ impl Default for HistoryOptions {
 
 
 #[derive(Default, Deserialize, Serialize, Debug)]
+#[serde(default)]
 pub struct HistoryWindow {
     pub options: HistoryOptions,
     #[serde(skip)]

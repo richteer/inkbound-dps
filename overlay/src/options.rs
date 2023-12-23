@@ -29,6 +29,7 @@ impl Default for OverlayOptions {
 }
 
 #[derive(Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct ColorOptions {
     pub aspects: std::collections::BTreeMap<Aspect, egui::Color32>,
 }

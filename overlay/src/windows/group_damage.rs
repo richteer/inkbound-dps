@@ -15,6 +15,7 @@ pub struct GroupDamageState {
 }
 
 #[derive(Default, Deserialize, Serialize, Debug)]
+#[serde(default)]
 pub struct GroupDamageWindow {
     #[serde(skip)]
     state: DiveCombatSelectionState,

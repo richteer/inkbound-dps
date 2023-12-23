@@ -58,6 +58,7 @@ impl std::fmt::Display for StatExtractionFunc {
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct StatSelectionState {
     pub selection: StatExtractionFunc,
     pub status_selection: String,
