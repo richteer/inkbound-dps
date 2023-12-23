@@ -8,11 +8,12 @@ use crate::{options::ColorOptions, OverlayOptions};
 
 use super::{show_dive_selection_box, WindowDisplay, extractors::{StatSelectionState, StatSelection}};
 
-#[derive(Default, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Default, PartialEq, Serialize, Deserialize, Debug, EnumIter, Clone, Copy)]
 pub enum HistoryMode {
     #[default]
     Split,
     Stacked,
+    Percent,
 }
 
 impl std::fmt::Display for HistoryMode {
@@ -20,6 +21,7 @@ impl std::fmt::Display for HistoryMode {
         let out = match self {
             HistoryMode::Split => "Split",
             HistoryMode::Stacked => "Stacked",
+            HistoryMode::Percent => "Percent",
         };
         f.write_str(out)
     }
@@ -116,8 +118,9 @@ impl HistoryWindow {
             egui::ComboBox::from_label("Mode")
                 .selected_text(self.options.mode.to_string())
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.options.mode, HistoryMode::Split, "Split");
-                    ui.selectable_value(&mut self.options.mode, HistoryMode::Stacked, "Stacked");
+                    for mode in HistoryMode::iter() {
+                        ui.selectable_value(&mut self.options.mode, mode, mode.to_string());
+                    }
                 })
                 .response.on_hover_text("Select which mode to render the history plot.\n\nSplit - Each player has their own vertical bar grouped by combat.\nStacked - Player damage bars are stacked on top of each other, with the total length of the bar representing total group damage.");
 
@@ -139,6 +142,12 @@ impl HistoryWindow {
                         .text("Bar Width"));
                     ui.checkbox(&mut self.options.stacked_show_totals, "Show Totals");
                 },
+                HistoryMode::Percent => {
+                    // Use the same bar width option as stacked, since they are basically the same render logic
+                    ui.add(egui::Slider::new(&mut self.options.stacked_bar_width, 0.25..=1.0)
+                        .max_decimals(2)
+                        .text("Bar Width"));
+                },
             }
         });
 
@@ -151,8 +160,9 @@ impl HistoryWindow {
         };
 
         let (bars, texts) = match self.options.mode {
-            HistoryMode::Split => (self.generate_split_bars(dive, self.options.group_bar_width, &options.colors, self.options.bar_order), None),
-            HistoryMode::Stacked => self.generate_stacked_bars(dive, self.options.stacked_bar_width, self.options.stacked_show_totals, &options.colors, self.options.bar_order),
+            HistoryMode::Split => (self.generate_split_bars(dive, &options.colors), None),
+            HistoryMode::Stacked => self.generate_stacked_bars(dive, &options.colors, false),
+            HistoryMode::Percent => self.generate_stacked_bars(dive, &options.colors, true),
         };
 
         let chart = BarChart::new(bars);
@@ -189,11 +199,13 @@ impl HistoryWindow {
                 }
             });
     }
+
     #[inline]
-    fn generate_split_bars(&self, dive: &DiveLog, bar_group_width: f64, colors: &ColorOptions, sorting: BarOrder) -> Vec<Bar> {
+    fn generate_split_bars(&self, dive: &DiveLog, colors: &ColorOptions) -> Vec<Bar> {
+        let bar_group_width = self.options.group_bar_width;
         dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
             let players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
-            let players = self.sort_players(players, sorting);
+            let players = self.sort_players(players, self.options.bar_order);
             players.iter().enumerate().map(|(pind, p)| {
                 let pind = pind as f64;
                 let num_players = combat.player_stats.player_stats.len() as f64;
@@ -209,24 +221,35 @@ impl HistoryWindow {
     }
 
     #[inline]
-    fn generate_stacked_bars(&self, dive: &DiveLog, bar_width: f64, show_stacked_totals: bool, colors: &ColorOptions, sorting: BarOrder) -> (Vec<Bar>, Option<Vec<Text>>) {
+    fn generate_stacked_bars(&self, dive: &DiveLog, colors: &ColorOptions, percent: bool) -> (Vec<Bar>, Option<Vec<Text>>) {
         let bars = dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
             let players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
-            let players = self.sort_players(players, sorting);
+            // Skip sum calculation if not in percent mode, save a bit of effort
+            let total: f64 = if percent { players.iter().map(|e| self.extract_stat(e)).sum() } else { 0.0 };
+            let players = self.sort_players(players, self.options.bar_order);
             players.iter().scan(0.0, |state, p| {
-                *state += self.extract_stat(p);
+                *state += if percent {
+                    self.extract_stat(p) / total * 100.0
+                } else {
+                    self.extract_stat(p)
+                };
                 Some((*state,  p))
             }).map(|(previous, p)| {
-                Bar::new(combat_index as f64 + 1.0, self.extract_stat(p))
+                let value = if percent {
+                    self.extract_stat(p) / total * 100.0
+                } else {
+                    self.extract_stat(p)
+                };
+                Bar::new(combat_index as f64 + 1.0, value)
                     .name(format!("{} {}", p.player_data.name, combat_index + 1))
-                    .base_offset(previous - self.extract_stat(p))
-                    .width(bar_width)
+                    .base_offset(previous - value)
+                    .width(self.options.stacked_bar_width)
                     .fill(colors.get_aspect_color(&p.player_data.class))
             }).collect::<Vec<Bar>>()
         }).flatten().collect();
 
         // TODO: This totally can be done in one pass with the previous
-        let texts = if show_stacked_totals {
+        let texts = if self.options.stacked_show_totals && !percent {
             Some(dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
                 let stat = combat.player_stats.player_stats.values().fold(0.0, |acc, elem| acc + self.extract_stat(elem));
                 Text::new(
@@ -235,7 +258,7 @@ impl HistoryWindow {
                 ).anchor(Align2::CENTER_BOTTOM)
             }).collect())
         } else {
-                None
+            None
         };
 
         (bars, texts)
