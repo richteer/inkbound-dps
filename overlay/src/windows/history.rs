@@ -115,20 +115,22 @@ impl HistoryWindow {
 
             self.show_stat_selection_box(ui);
 
-            egui::ComboBox::from_label("Mode")
-                .selected_text(self.options.mode.to_string())
-                .show_ui(ui, |ui| {
-                    for mode in HistoryMode::iter() {
-                        ui.selectable_value(&mut self.options.mode, mode, mode.to_string());
-                    }
-                })
-                .response.on_hover_text("Select which mode to render the history plot.\n\nSplit - Each player has their own vertical bar grouped by combat.\nStacked - Player damage bars are stacked on top of each other, with the total length of the bar representing total group damage.");
+            ui.horizontal(|ui| {
+                ui.selectable_value(&mut self.options.mode, HistoryMode::Split, HistoryMode::Split.to_string())
+                    .on_hover_text("Each player has their own vertical bar, grouped horizontally by combat.");
+                ui.selectable_value(&mut self.options.mode, HistoryMode::Stacked, HistoryMode::Stacked.to_string())
+                    .on_hover_text("Player stat bars are stacked on top of each other, with the total length of the bar repesenting the total group stat value.");
+                ui.selectable_value(&mut self.options.mode, HistoryMode::Percent, HistoryMode::Percent.to_string())
+                    .on_hover_text("A single full-height (100%) bar is segmented by each player's percentage contribution to the total stat value.");
+                ui.label("Mode")
+                    .on_hover_text("Select which mode to use to render the history plot.\nMouse over each option for more details.");
+            });
 
             egui::ComboBox::from_label("Bar Order")
                 .selected_text(self.options.bar_order.to_string())
                 .show_ui(ui, |ui|{
                     BarOrder::iter().for_each(|e| { ui.selectable_value(&mut self.options.bar_order, e, e.to_string()); })
-                }).response.on_hover_text("The order that the bars will be rendered.\n\nIn split mode, ascending(⬆) is left to right.\nIn stacked mode, ascending(⬆) is bottom-up.");
+                }).response.on_hover_text("The order that the bars will be rendered.\n\nIn split mode, ascending(⬆) is left to right.\nIn stacked/percent mode, ascending(⬆) is bottom-up.");
 
             match self.options.mode {
                 HistoryMode::Split => {
@@ -136,17 +138,11 @@ impl HistoryWindow {
                         .max_decimals(2)
                         .text("Bar Group Width"));
                 },
-                HistoryMode::Stacked => {
+                HistoryMode::Stacked | HistoryMode::Percent => {
                     ui.add(egui::Slider::new(&mut self.options.stacked_bar_width, 0.25..=1.0)
                         .max_decimals(2)
                         .text("Bar Width"));
                     ui.checkbox(&mut self.options.stacked_show_totals, "Show Totals");
-                },
-                HistoryMode::Percent => {
-                    // Use the same bar width option as stacked, since they are basically the same render logic
-                    ui.add(egui::Slider::new(&mut self.options.stacked_bar_width, 0.25..=1.0)
-                        .max_decimals(2)
-                        .text("Bar Width"));
                 },
             }
         });
@@ -249,11 +245,11 @@ impl HistoryWindow {
         }).flatten().collect();
 
         // TODO: This totally can be done in one pass with the previous
-        let texts = if self.options.stacked_show_totals && !percent {
+        let texts = if self.options.stacked_show_totals {
             Some(dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
                 let stat = combat.player_stats.player_stats.values().fold(0.0, |acc, elem| acc + self.extract_stat(elem));
                 Text::new(
-                    PlotPoint { x: combat_index as f64 + 1.0, y: stat },
+                    PlotPoint { x: combat_index as f64 + 1.0, y: if percent { 100.0 } else { stat } },
                     format!("{}", stat)
                 ).anchor(Align2::CENTER_BOTTOM)
             }).collect())
