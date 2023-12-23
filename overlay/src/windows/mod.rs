@@ -13,6 +13,8 @@ pub use group_damage::*;
 mod history;
 pub use history::*;
 
+pub mod extractors;
+
 use serde::{Deserialize, Serialize};
 use inkbound_parser::parser::{DataLog, PlayerStats};
 
