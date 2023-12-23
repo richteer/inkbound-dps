@@ -2,8 +2,7 @@ use egui::Ui;
 use egui_plot::{Text, PlotPoint, BarChart, Plot, Bar};
 use inkbound_parser::parser::{PlayerStats, DataLog};
 use serde::{Deserialize, Serialize};
-use strum::IntoEnumIterator;
-use super::extractors::StatExtractionFunc;
+use super::extractors::{StatSelection, StatSelectionState};
 
 use crate::OverlayOptions;
 
@@ -20,7 +19,7 @@ pub struct GroupDamageWindow {
     #[serde(skip)]
     state: DiveCombatSelectionState,
     mode: DamageTotalsMode,
-    stat_selection: StatExtractionFunc,
+    stat_selection: StatSelectionState,
 }
 
 #[typetag::serde]
@@ -29,13 +28,7 @@ impl WindowDisplay for GroupDamageWindow {
         ui.collapsing("⛭", |ui| {
             self.mode_selection(ui);
             self.show_selection_boxes(ui, data);
-            egui::ComboBox::from_label("Stat")
-                .selected_text(self.stat_selection.to_string())
-                .show_ui(ui, |ui| {
-                    for statfunc in StatExtractionFunc::iter() {
-                        ui.selectable_value(&mut self.stat_selection, statfunc, statfunc.to_string());
-                    }
-                });
+            self.show_stat_selection_box(ui);
         });
 
         if let Some(stats) = self.get_current_player_stat_list(data) {
@@ -46,7 +39,7 @@ impl WindowDisplay for GroupDamageWindow {
     }
 
     fn name(&self) -> String {
-        format!("{}: {}", self.stat_selection, self.mode)
+        format!("{}: {}", self.stat_selection.selection, self.mode)
     }
 }
 
@@ -64,24 +57,33 @@ impl DiveCombatSplit for GroupDamageWindow {
     }
 }
 
+impl StatSelection for GroupDamageWindow {
+    fn get_stat_selection<'a>(&'a self) -> &'a super::extractors::StatSelectionState {
+        &self.stat_selection
+    }
+
+    fn get_stat_selection_mut<'a>(&'a mut self) -> &'a mut super::extractors::StatSelectionState {
+        &mut self.stat_selection
+    }
+}
+
 impl GroupDamageWindow {
     /// Helper to draw the plot for group damage stats
     #[inline]
     fn draw_group_damage_plot(&self, ui: &mut Ui, options: &OverlayOptions, mut statlist: Vec<&PlayerStats>) {
-        let extract_func = self.stat_selection.to_func();
-        let total_stat = statlist.iter().fold(0.0, |acc, player| acc + extract_func(player));
+        let total_stat = statlist.iter().fold(0.0, |acc, player| acc + self.extract_stat(player));
 
-        statlist.sort_by_key(|e| extract_func(e) as i64);
+        statlist.sort_by_key(|e| self.extract_stat(e) as i64);
         let bars = {
             statlist.iter().enumerate().map(|(index, stats)|
-                Bar::new(index as f64, extract_func(stats))
+                Bar::new(index as f64, self.extract_stat(stats))
                     .width(1.0)
                     .fill(options.colors.get_aspect_color(&stats.player_data.class))
             ).collect()
         };
         let texts: Vec<Text> = {
             statlist.iter().enumerate().map(|(index, stats)| {
-                let stat = extract_func(stats);
+                let stat = self.extract_stat(stats);
                 Text::new(
                     PlotPoint { x: 0.0, y: index as f64 },
                     format!("  {} - {:.*} ({:.2}%)",

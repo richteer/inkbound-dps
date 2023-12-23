@@ -1,6 +1,6 @@
 use inkbound_parser::parser::PlayerStats;
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
+use strum::{EnumIter, IntoEnumIterator};
 
 // In case I change my mind...
 type ExtractType = f64;
@@ -76,18 +76,41 @@ impl std::fmt::Display for StatExtractionFunc {
     }
 }
 
-impl StatExtractionFunc {
-    pub fn to_func(&self) -> fn(&PlayerStats) -> ExtractType {
-        match self {
-            StatExtractionFunc::TotalDamageDealt => extract_total_damage_dealt,
-            StatExtractionFunc::TotalCritDamageDealt => extract_total_crit_damage_dealt,
-            StatExtractionFunc::TotalDamageReceived => extract_total_damage_received,
-            StatExtractionFunc::PoisonApplied => extract_poison_applied,
-            StatExtractionFunc::BurnApplied => extract_burn_applied,
-            StatExtractionFunc::BleedApplied => extract_bleed_applied,
-            StatExtractionFunc::FrostbiteApplied => extract_frostbite_applied,
-            StatExtractionFunc::OrbCount => extract_orb_count,
-            StatExtractionFunc::DamagePerOrb => extract_damage_per_orb,
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct StatSelectionState {
+    pub selection: StatExtractionFunc,
+}
+
+pub trait StatSelection {
+    // TODO: figure out if there's a way to avoid needing both
+    fn get_stat_selection<'a>(&'a self) -> &'a StatSelectionState;
+    fn get_stat_selection_mut<'a>(&'a mut self) -> &'a mut StatSelectionState;
+
+    /// Apply the configured extraction function to a PlayerStats.
+    /// Handles any internal options under the hood.
+    fn extract_stat(&self, player: &PlayerStats) -> ExtractType {
+        let stat_selection = self.get_stat_selection();
+        match stat_selection.selection {
+            StatExtractionFunc::TotalDamageDealt => extract_total_damage_dealt(player),
+            StatExtractionFunc::TotalCritDamageDealt => extract_total_crit_damage_dealt(player),
+            StatExtractionFunc::TotalDamageReceived => extract_total_damage_received(player),
+            StatExtractionFunc::PoisonApplied => extract_poison_applied(player),
+            StatExtractionFunc::BurnApplied => extract_burn_applied(player),
+            StatExtractionFunc::BleedApplied => extract_bleed_applied(player),
+            StatExtractionFunc::FrostbiteApplied => extract_frostbite_applied(player),
+            StatExtractionFunc::OrbCount => extract_orb_count(player),
+            StatExtractionFunc::DamagePerOrb => extract_damage_per_orb(player),
         }
+    }
+
+    fn show_stat_selection_box(&mut self, ui: &mut egui::Ui) {
+        let stat_selection = &mut self.get_stat_selection_mut().selection;
+        egui::ComboBox::from_label("Stat")
+            .selected_text(stat_selection.to_string())
+            .show_ui(ui, |ui| {
+                for statfunc in StatExtractionFunc::iter() {
+                    ui.selectable_value(stat_selection, statfunc, statfunc.to_string());
+                }
+            });
     }
 }
