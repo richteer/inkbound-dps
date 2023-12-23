@@ -20,3 +20,9 @@ eframe = { git = "https://github.com/richteer/egui", branch = "eframe-overlay-0.
 ## Uncomment to use a local development egui
 # egui = { path = "../egui/crates/egui" }
 # eframe = { path = "../egui/crates/eframe" }
+
+[profile.dev.package.inkbound-parser]
+opt-level = 3
+
+[profile.dev.package."*"]
+opt-level = 3
