@@ -17,21 +17,8 @@ fn extract_total_damage_received(player: &PlayerStats) -> ExtractType {
     player.total_damage_received as ExtractType
 }
 
-// TODO: I don't like the hardcoding here. Consider user-parameterizing, or defining an allowlist
-fn extract_poison_applied(player: &PlayerStats) -> ExtractType {
-    *player.status_applied.get("Poison").unwrap_or(&0) as ExtractType
-}
-
-fn extract_burn_applied(player: &PlayerStats) -> ExtractType {
-    *player.status_applied.get("Burn").unwrap_or(&0) as ExtractType
-}
-
-fn extract_bleed_applied(player: &PlayerStats) -> ExtractType {
-    *player.status_applied.get("Bleed").unwrap_or(&0) as ExtractType
-}
-
-fn extract_frostbite_applied(player: &PlayerStats) -> ExtractType {
-    *player.status_applied.get("Frostbite").unwrap_or(&0) as ExtractType
+fn extract_status_effect_applied(player: &PlayerStats, status: &str) -> ExtractType {
+    *player.status_applied.get(status).unwrap_or(&0) as ExtractType
 }
 
 fn extract_orb_count(player: &PlayerStats) -> ExtractType {
@@ -52,10 +39,7 @@ pub enum StatExtractionFunc {
     TotalDamageDealt,
     TotalCritDamageDealt,
     TotalDamageReceived,
-    PoisonApplied,
-    BurnApplied,
-    BleedApplied,
-    FrostbiteApplied,
+    StatusEffectApplied,
     OrbCount,
     DamagePerOrb,
 }
@@ -66,10 +50,7 @@ impl std::fmt::Display for StatExtractionFunc {
             StatExtractionFunc::TotalDamageDealt => "Damage Dealt",
             StatExtractionFunc::TotalCritDamageDealt => "Crit Damage Dealt",
             StatExtractionFunc::TotalDamageReceived => "Damage Received",
-            StatExtractionFunc::PoisonApplied => "Poison Stacks",
-            StatExtractionFunc::BurnApplied => "Burn Stacks",
-            StatExtractionFunc::BleedApplied => "Bleed Stacks",
-            StatExtractionFunc::FrostbiteApplied => "Frostbite Stacks",
+            StatExtractionFunc::StatusEffectApplied => "Status Effect Applied",
             StatExtractionFunc::OrbCount => "Orbs Consumed",
             StatExtractionFunc::DamagePerOrb => "Damage Per Orb",
         })
@@ -79,6 +60,21 @@ impl std::fmt::Display for StatExtractionFunc {
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct StatSelectionState {
     pub selection: StatExtractionFunc,
+    pub status_selection: String,
+}
+
+impl std::fmt::Display for StatSelectionState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Override the display of specific extractors, mostly those with additional parameters
+        match self.selection {
+            StatExtractionFunc::StatusEffectApplied => if !self.status_selection.is_empty() {
+                f.write_str(&format!("{} Stacks", self.status_selection))
+            } else {
+                self.selection.fmt(f)
+            }
+            _ => self.selection.fmt(f)
+        }
+    }
 }
 
 pub trait StatSelection {
@@ -94,23 +90,30 @@ pub trait StatSelection {
             StatExtractionFunc::TotalDamageDealt => extract_total_damage_dealt(player),
             StatExtractionFunc::TotalCritDamageDealt => extract_total_crit_damage_dealt(player),
             StatExtractionFunc::TotalDamageReceived => extract_total_damage_received(player),
-            StatExtractionFunc::PoisonApplied => extract_poison_applied(player),
-            StatExtractionFunc::BurnApplied => extract_burn_applied(player),
-            StatExtractionFunc::BleedApplied => extract_bleed_applied(player),
-            StatExtractionFunc::FrostbiteApplied => extract_frostbite_applied(player),
+            StatExtractionFunc::StatusEffectApplied => extract_status_effect_applied(player, &stat_selection.status_selection),
             StatExtractionFunc::OrbCount => extract_orb_count(player),
             StatExtractionFunc::DamagePerOrb => extract_damage_per_orb(player),
         }
     }
 
     fn show_stat_selection_box(&mut self, ui: &mut egui::Ui) {
-        let stat_selection = &mut self.get_stat_selection_mut().selection;
+        let stat_selection = self.get_stat_selection_mut();
         egui::ComboBox::from_label("Stat")
-            .selected_text(stat_selection.to_string())
+            .selected_text(stat_selection.selection.to_string())
             .show_ui(ui, |ui| {
                 for statfunc in StatExtractionFunc::iter() {
-                    ui.selectable_value(stat_selection, statfunc, statfunc.to_string());
+                    ui.selectable_value(&mut stat_selection.selection, statfunc, statfunc.to_string());
                 }
             });
+        if stat_selection.selection == StatExtractionFunc::StatusEffectApplied {
+            egui::ComboBox::from_label("Status Effect")
+                .selected_text(stat_selection.status_selection.to_string())
+                .show_ui(ui, |ui| {
+                    // TODO: configure this, perhaps allow custom overrides
+                    for status in ["Poison", "Burn", "Bleed", "Frostbite"].into_iter() {
+                        ui.selectable_value(&mut stat_selection.status_selection, status.to_string(), status);
+                    }
+                });
+        }
     }
 }

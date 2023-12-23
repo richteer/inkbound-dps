@@ -39,7 +39,7 @@ impl WindowDisplay for GroupDamageWindow {
     }
 
     fn name(&self) -> String {
-        format!("{}: {}", self.stat_selection.selection, self.mode)
+        format!("{}: {}", self.stat_selection, self.mode)
     }
 }
 
