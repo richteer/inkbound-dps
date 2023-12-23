@@ -6,7 +6,7 @@ use strum::{IntoEnumIterator, EnumIter};
 
 use crate::{options::ColorOptions, OverlayOptions};
 
-use super::{show_dive_selection_box, WindowDisplay};
+use super::{show_dive_selection_box, WindowDisplay, extractors::{StatSelectionState, StatSelection}};
 
 #[derive(Default, PartialEq, Serialize, Deserialize, Debug)]
 pub enum HistoryMode {
@@ -32,9 +32,9 @@ pub struct HistoryState {
 
 #[derive(Default, Debug, Serialize, Deserialize, EnumIter, PartialEq, Eq, Clone, Copy)]
 pub enum BarOrder {
-    AscendingDamage,
+    AscendingStat,
     #[default]
-    DescendingDamage,
+    DescendingStat,
     AscendingName,
     DescendingName,
 }
@@ -42,10 +42,10 @@ pub enum BarOrder {
 impl std::fmt::Display for BarOrder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
-            BarOrder::AscendingDamage  => "Damage ⬆",
-            BarOrder::DescendingDamage => "Damage ⬇",
-            BarOrder::AscendingName    => "Name ⬆",
-            BarOrder::DescendingName   => "Name ⬇",
+            BarOrder::AscendingStat  => "Stat ⬆",
+            BarOrder::DescendingStat => "Stat ⬇",
+            BarOrder::AscendingName  => "Name ⬆",
+            BarOrder::DescendingName => "Name ⬇",
         })
     }
 }
@@ -75,11 +75,13 @@ impl Default for HistoryOptions {
     }
 }
 
+
 #[derive(Default, Deserialize, Serialize, Debug)]
 pub struct HistoryWindow {
     pub options: HistoryOptions,
     #[serde(skip)]
     state: HistoryState,
+    pub stat_selection: StatSelectionState,
 }
 
 #[typetag::serde]
@@ -89,80 +91,28 @@ impl WindowDisplay for HistoryWindow {
     }
 
     fn name(&self) -> String {
-        "History".to_string()
+        format!("History: {}", self.stat_selection)
     }
 }
 
-// TODO: Consider passing in a sort function to the generate functions, or just passing in pre-sorted data
-fn sort_players(mut players: Vec<PlayerStats>, sorting: BarOrder) -> Vec<PlayerStats> {
-    match sorting {
-        BarOrder::AscendingDamage  => players.sort_by_key(|p| p.total_damage_dealt),
-        BarOrder::DescendingDamage => players.sort_by_key(|p| std::cmp::Reverse(p.total_damage_dealt)),
-        BarOrder::AscendingName    => players.sort_by(|a,b| a.player_data.name.to_lowercase().cmp(&b.player_data.name.to_lowercase())),
-        BarOrder::DescendingName   => players.sort_by(|a,b| b.player_data.name.to_lowercase().cmp(&a.player_data.name.to_lowercase())),
-    };
+impl StatSelection for HistoryWindow {
+    fn get_stat_selection<'a>(&'a self) -> &'a StatSelectionState {
+        &self.stat_selection
+    }
 
-    players
+    fn get_stat_selection_mut<'a>(&'a mut self) -> &'a mut StatSelectionState {
+        &mut self.stat_selection
+    }
 }
-
-#[inline]
-fn generate_split_bars(dive: &DiveLog, bar_group_width: f64, colors: &ColorOptions, sorting: BarOrder) -> Vec<Bar> {
-    dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
-        let players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
-        let players = sort_players(players, sorting);
-        players.iter().enumerate().map(|(pind, p)| {
-            let pind = pind as f64;
-            let num_players = combat.player_stats.player_stats.len() as f64;
-            let bar_width = bar_group_width / num_players;
-            // let x_offset = ((pind + bar_group_width / 2.0) * width) - (bar_group_width / 2.0);
-            let x_offset = pind * bar_width - ((bar_group_width - bar_width) / 2.0);
-            Bar::new(combat_index as f64 + x_offset + 1.0, p.total_damage_dealt as f64)
-                .name(format!("{} {}", p.player_data.name, combat_index + 1))
-                .width(bar_width as f64)
-                .fill(colors.get_aspect_color(&p.player_data.class))
-        }).collect::<Vec<Bar>>()
-    }).flatten().collect()
-}
-
-#[inline]
-fn generate_stacked_bars(dive: &DiveLog, bar_width: f64, show_stacked_totals: bool, colors: &ColorOptions, sorting: BarOrder) -> (Vec<Bar>, Option<Vec<Text>>) {
-    let bars = dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
-        let players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
-        let players = sort_players(players, sorting);
-        players.iter().scan(0, |state, p| {
-            *state += p.total_damage_dealt;
-            Some((*state,  p))
-        }).map(|(previous, p)| {
-            Bar::new(combat_index as f64 + 1.0, p.total_damage_dealt as f64)
-                .name(format!("{} {}", p.player_data.name, combat_index + 1))
-                .base_offset((previous - p.total_damage_dealt) as f64)
-                .width(bar_width)
-                .fill(colors.get_aspect_color(&p.player_data.class))
-        }).collect::<Vec<Bar>>()
-    }).flatten().collect();
-
-    // TODO: This totally can be done in one pass with the previous
-    let texts = if show_stacked_totals {
-        Some(dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
-            let total_damage_dealt = combat.player_stats.player_stats.values().fold(0, |acc, elem| acc + elem.total_damage_dealt);
-            Text::new(
-                PlotPoint { x: combat_index as f64 + 1.0, y: total_damage_dealt as f64 },
-                format!("{}", total_damage_dealt)
-            ).anchor(Align2::CENTER_BOTTOM)
-        }).collect())
-    } else {
-            None
-    };
-
-    (bars, texts)
-}
-
 
 impl HistoryWindow {
 
     pub fn draw_history_window(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, datalog: &DataLog) {
         ui.collapsing("⛭", |ui| {
             show_dive_selection_box(ui, &mut self.state.dive, datalog.dives.len());
+
+            self.show_stat_selection_box(ui);
+
             egui::ComboBox::from_label("Mode")
                 .selected_text(self.options.mode.to_string())
                 .show_ui(ui, |ui| {
@@ -201,8 +151,8 @@ impl HistoryWindow {
         };
 
         let (bars, texts) = match self.options.mode {
-            HistoryMode::Split => (generate_split_bars(dive, self.options.group_bar_width, &options.colors, self.options.bar_order), None),
-            HistoryMode::Stacked => generate_stacked_bars(dive, self.options.stacked_bar_width, self.options.stacked_show_totals, &options.colors, self.options.bar_order),
+            HistoryMode::Split => (self.generate_split_bars(dive, self.options.group_bar_width, &options.colors, self.options.bar_order), None),
+            HistoryMode::Stacked => self.generate_stacked_bars(dive, self.options.stacked_bar_width, self.options.stacked_show_totals, &options.colors, self.options.bar_order),
         };
 
         let chart = BarChart::new(bars);
@@ -238,5 +188,69 @@ impl HistoryWindow {
                     }
                 }
             });
+    }
+    #[inline]
+    fn generate_split_bars(&self, dive: &DiveLog, bar_group_width: f64, colors: &ColorOptions, sorting: BarOrder) -> Vec<Bar> {
+        dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
+            let players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
+            let players = self.sort_players(players, sorting);
+            players.iter().enumerate().map(|(pind, p)| {
+                let pind = pind as f64;
+                let num_players = combat.player_stats.player_stats.len() as f64;
+                let bar_width = bar_group_width / num_players;
+                // let x_offset = ((pind + bar_group_width / 2.0) * width) - (bar_group_width / 2.0);
+                let x_offset = pind * bar_width - ((bar_group_width - bar_width) / 2.0);
+                Bar::new(combat_index as f64 + x_offset + 1.0, self.extract_stat(p))
+                    .name(format!("{} {}", p.player_data.name, combat_index + 1))
+                    .width(bar_width as f64)
+                    .fill(colors.get_aspect_color(&p.player_data.class))
+            }).collect::<Vec<Bar>>()
+        }).flatten().collect()
+    }
+
+    #[inline]
+    fn generate_stacked_bars(&self, dive: &DiveLog, bar_width: f64, show_stacked_totals: bool, colors: &ColorOptions, sorting: BarOrder) -> (Vec<Bar>, Option<Vec<Text>>) {
+        let bars = dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
+            let players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
+            let players = self.sort_players(players, sorting);
+            players.iter().scan(0.0, |state, p| {
+                *state += self.extract_stat(p);
+                Some((*state,  p))
+            }).map(|(previous, p)| {
+                Bar::new(combat_index as f64 + 1.0, self.extract_stat(p))
+                    .name(format!("{} {}", p.player_data.name, combat_index + 1))
+                    .base_offset(previous - self.extract_stat(p))
+                    .width(bar_width)
+                    .fill(colors.get_aspect_color(&p.player_data.class))
+            }).collect::<Vec<Bar>>()
+        }).flatten().collect();
+
+        // TODO: This totally can be done in one pass with the previous
+        let texts = if show_stacked_totals {
+            Some(dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
+                let stat = combat.player_stats.player_stats.values().fold(0.0, |acc, elem| acc + self.extract_stat(elem));
+                Text::new(
+                    PlotPoint { x: combat_index as f64 + 1.0, y: stat },
+                    format!("{}", stat)
+                ).anchor(Align2::CENTER_BOTTOM)
+            }).collect())
+        } else {
+                None
+        };
+
+        (bars, texts)
+    }
+
+    // TODO: Consider passing in a sort function to the generate functions, or just passing in pre-sorted data
+    fn sort_players(&self, mut players: Vec<PlayerStats>, sorting: BarOrder) -> Vec<PlayerStats> {
+        match sorting {
+            // TODO: Probably shouldn't just cast these to ints, but it probably doesn't matter?
+            BarOrder::AscendingStat  => players.sort_by_key(|p| self.extract_stat(p) as i64),
+            BarOrder::DescendingStat => players.sort_by_key(|p| std::cmp::Reverse(self.extract_stat(p) as i64)),
+            BarOrder::AscendingName  => players.sort_by(|a,b| a.player_data.name.to_lowercase().cmp(&b.player_data.name.to_lowercase())),
+            BarOrder::DescendingName => players.sort_by(|a,b| b.player_data.name.to_lowercase().cmp(&a.player_data.name.to_lowercase())),
+        };
+
+        players
     }
 }
