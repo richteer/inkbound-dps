@@ -6,25 +6,25 @@ use super::extractors::{StatSelection, StatSelectionState};
 
 use crate::OverlayOptions;
 
-use super::{WindowDisplay, DamageTotalsMode, DiveCombatSplit, DiveCombatSelectionState};
+use super::{WindowDisplay, DiveCombatSelection, DiveCombatSplit, DiveCombatSelectionState};
 
 #[derive(Default, Debug)]
-pub struct GroupDamageState {
+pub struct GroupStatsState {
     pub dive: usize,
     pub combat: usize,
 }
 
 #[derive(Default, Deserialize, Serialize, Debug)]
 #[serde(default)]
-pub struct GroupDamageWindow {
+pub struct GroupStatsWindow {
     #[serde(skip)]
     state: DiveCombatSelectionState,
-    mode: DamageTotalsMode,
+    mode: DiveCombatSelection,
     stat_selection: StatSelectionState,
 }
 
 #[typetag::serde]
-impl WindowDisplay for GroupDamageWindow {
+impl WindowDisplay for GroupStatsWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
         ui.collapsing("⛭", |ui| {
             self.mode_selection(ui);
@@ -33,7 +33,7 @@ impl WindowDisplay for GroupDamageWindow {
         });
 
         if let Some(stats) = self.get_current_player_stat_list(data) {
-            self.draw_group_damage_plot(ui, options, stats.values().collect());
+            self.draw_group_stats_plot(ui, options, stats.values().collect());
         } else {
             ui.label(super::NO_DATA_MSG.to_string());
         };
@@ -44,12 +44,12 @@ impl WindowDisplay for GroupDamageWindow {
     }
 }
 
-impl DiveCombatSplit for GroupDamageWindow {
-    fn mode<'a>(&'a mut self) -> &'a mut DamageTotalsMode {
+impl DiveCombatSplit for GroupStatsWindow {
+    fn mode<'a>(&'a mut self) -> &'a mut DiveCombatSelection {
         &mut self.mode
     }
 
-    fn set_mode(&mut self, mode: DamageTotalsMode) {
+    fn set_mode(&mut self, mode: DiveCombatSelection) {
         self.mode = mode
     }
 
@@ -58,7 +58,7 @@ impl DiveCombatSplit for GroupDamageWindow {
     }
 }
 
-impl StatSelection for GroupDamageWindow {
+impl StatSelection for GroupStatsWindow {
     fn get_stat_selection<'a>(&'a self) -> &'a super::extractors::StatSelectionState {
         &self.stat_selection
     }
@@ -68,10 +68,10 @@ impl StatSelection for GroupDamageWindow {
     }
 }
 
-impl GroupDamageWindow {
+impl GroupStatsWindow {
     /// Helper to draw the plot for group damage stats
     #[inline]
-    fn draw_group_damage_plot(&self, ui: &mut Ui, options: &OverlayOptions, mut statlist: Vec<&PlayerStats>) {
+    fn draw_group_stats_plot(&self, ui: &mut Ui, options: &OverlayOptions, mut statlist: Vec<&PlayerStats>) {
         let total_stat = statlist.iter().fold(0.0, |acc, player| acc + self.extract_stat(player));
 
         statlist.sort_by_key(|e| self.extract_stat(e) as i64);

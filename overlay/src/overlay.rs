@@ -30,10 +30,10 @@ pub struct Overlay {
 pub fn default_windows() -> BTreeMap<WindowId, OverlayWindow> {
     use crate::windows::*;
     let windows = vec![
-        GroupDamageWindow::window_from_mode(DamageTotalsMode::Dive),
-        GroupDamageWindow::window_from_mode(DamageTotalsMode::Combat),
-        IndividualSkillsWindow::window_from_mode(DamageTotalsMode::Dive),
-        IndividualSkillsWindow::window_from_mode(DamageTotalsMode::Combat),
+        GroupStatsWindow::window_from_mode(DiveCombatSelection::Dive),
+        GroupStatsWindow::window_from_mode(DiveCombatSelection::Combat),
+        SkillTotalsWindow::window_from_mode(DiveCombatSelection::Dive),
+        SkillTotalsWindow::window_from_mode(DiveCombatSelection::Combat),
         OverlayWindow::new::<HistoryWindow>(),
     ];
 

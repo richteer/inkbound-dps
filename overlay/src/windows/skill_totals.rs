@@ -7,36 +7,36 @@ use serde::{Deserialize, Serialize};
 
 use crate::OverlayOptions;
 
-use super::{WindowDisplay, DamageTotalsMode, DiveCombatSplit, DiveCombatSelectionState, PlayerSelection, PlayerDiveCombatOptions};
+use super::{WindowDisplay, DiveCombatSelection, DiveCombatSplit, DiveCombatSelectionState, PlayerSelection, PlayerDiveCombatOptions};
 
 
 #[derive(Default, Debug)]
-pub struct IndividualDamageState {
+pub struct SkillTotalsState {
     pub dive: usize,
     pub combat: usize,
 }
 
 #[derive(Default, Deserialize, Serialize, Debug)]
 #[serde(default)]
-pub struct IndividualSkillsWindow {
+pub struct SkillTotalsWindow {
     #[serde(skip)]
     state: DiveCombatSelectionState,
-    mode: DamageTotalsMode,
+    mode: DiveCombatSelection,
     player: Option<String>,
 }
 
-impl PlayerSelection for IndividualSkillsWindow {
+impl PlayerSelection for SkillTotalsWindow {
     fn player<'a>(&'a mut self) -> &'a mut Option<String> {
         &mut self.player
     }
 }
 
-impl DiveCombatSplit for IndividualSkillsWindow {
-    fn mode<'a>(&'a mut self) -> &'a mut DamageTotalsMode {
+impl DiveCombatSplit for SkillTotalsWindow {
+    fn mode<'a>(&'a mut self) -> &'a mut DiveCombatSelection {
         &mut self.mode
     }
 
-    fn set_mode(&mut self, mode: DamageTotalsMode) {
+    fn set_mode(&mut self, mode: DiveCombatSelection) {
         self.mode = mode
     }
 
@@ -46,7 +46,7 @@ impl DiveCombatSplit for IndividualSkillsWindow {
 }
 
 #[typetag::serde]
-impl WindowDisplay for IndividualSkillsWindow {
+impl WindowDisplay for SkillTotalsWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
         self.show_options(ui, data);
 
@@ -94,7 +94,7 @@ fn clean_skill_name<'a>(name: &String) -> String {
 }
 
 
-impl IndividualSkillsWindow {
+impl SkillTotalsWindow {
     /// Draw the bar plot for the individual skills given the player stats data
     #[inline]
     fn draw_individual_damage_plot(&self, ui: &mut Ui, player_stats: &PlayerStats, options: &OverlayOptions) {

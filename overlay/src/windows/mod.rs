@@ -4,11 +4,11 @@ use std::collections::HashMap;
 
 pub use settings::*;
 
-mod individual_damage;
-pub use individual_damage::*;
+mod skill_totals;
+pub use skill_totals::*;
 
-mod group_damage;
-pub use group_damage::*;
+mod group_stats;
+pub use group_stats::*;
 
 mod history;
 pub use history::*;
@@ -91,17 +91,17 @@ pub fn show_dive_selection_box(ui: &mut egui::Ui, dive_state: &mut usize, num_di
 
 /// Helper Enum for windows that want to select between per-combat and per-dive modes
 #[derive(Default, Deserialize, Serialize, Debug, PartialEq)]
-pub enum DamageTotalsMode {
+pub enum DiveCombatSelection {
     #[default]
     Dive,
     Combat,
 }
 
-impl std::fmt::Display for DamageTotalsMode {
+impl std::fmt::Display for DiveCombatSelection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
-            DamageTotalsMode::Dive => "Dive",
-            DamageTotalsMode::Combat => "Combat",
+            DiveCombatSelection::Dive => "Dive",
+            DiveCombatSelection::Combat => "Combat",
         })
     }
 }
@@ -116,20 +116,20 @@ pub struct DiveCombatSelectionState {
 // Not really sure why the 'static lifetime is needed here
 pub trait DiveCombatSplit: WindowDisplay + Default + 'static {
     /// Return a mutable reference to however the window is storing the mode state
-    fn mode<'a>(&'a mut self) -> &'a mut DamageTotalsMode;
+    fn mode<'a>(&'a mut self) -> &'a mut DiveCombatSelection;
     /// Set the mode for the window, this is most likely only used by initialization
-    fn set_mode(&mut self, mode: DamageTotalsMode);
+    fn set_mode(&mut self, mode: DiveCombatSelection);
     /// Get a mutable reference to the selected dive/combat state
     fn state<'a>(&'a mut self) -> &'a mut DiveCombatSelectionState;
 
     fn mode_selection(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-           ui.selectable_value(self.mode(), DamageTotalsMode::Dive, DamageTotalsMode::Dive.to_string());
-           ui.selectable_value(self.mode(), DamageTotalsMode::Combat, DamageTotalsMode::Combat.to_string());
+           ui.selectable_value(self.mode(), DiveCombatSelection::Dive, DiveCombatSelection::Dive.to_string());
+           ui.selectable_value(self.mode(), DiveCombatSelection::Combat, DiveCombatSelection::Combat.to_string());
         });
     }
 
-    fn window_from_mode(mode: DamageTotalsMode) -> OverlayWindow {
+    fn window_from_mode(mode: DiveCombatSelection) -> OverlayWindow {
         let mut window = Self::default();
         window.set_mode(mode);
         OverlayWindow::from_window(Box::new(window))
@@ -168,8 +168,8 @@ pub trait DiveCombatSplit: WindowDisplay + Default + 'static {
 
     fn show_selection_boxes(&mut self, ui: &mut egui::Ui, data: &DataLog) {
         match self.mode() {
-            DamageTotalsMode::Dive => self.show_dive_selection_box(ui, data),
-            DamageTotalsMode::Combat => {
+            DiveCombatSelection::Dive => self.show_dive_selection_box(ui, data),
+            DiveCombatSelection::Combat => {
                 self.show_dive_selection_box(ui, data);
                 self.show_combat_selection_box(ui, data);
             },
@@ -178,8 +178,8 @@ pub trait DiveCombatSplit: WindowDisplay + Default + 'static {
 
     fn get_current_player_stat_list<'a>(&mut self, data: &'a DataLog) -> Option<&'a HashMap<String, PlayerStats>> {
         match self.mode() {
-            DamageTotalsMode::Dive => data.dives.get(self.state().dive).and_then(|d| Some(&d.player_stats.player_stats)),
-            DamageTotalsMode::Combat => {
+            DiveCombatSelection::Dive => data.dives.get(self.state().dive).and_then(|d| Some(&d.player_stats.player_stats)),
+            DiveCombatSelection::Combat => {
                 let state = self.state();
                 if let Some(dive) = data.dives.get(state.dive) {
                     dive.combats.get(state.combat).and_then(|c| Some(&c.player_stats.player_stats))

@@ -34,8 +34,8 @@ pub struct SettingsState {
 
 #[derive(EnumIter, Debug, PartialEq, Eq)]
 enum AddWindowChoice {
-    GroupDamage,
-    IndividualSkills,
+    GroupStats,
+    SkillTotals,
     History,
 }
 
@@ -43,8 +43,8 @@ impl std::fmt::Display for AddWindowChoice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             // TODO: Consider defining these in the mod so they can be reused by the window title too or something
-            AddWindowChoice::GroupDamage => "Group Damage",
-            AddWindowChoice::IndividualSkills => "Skill Totals",
+            AddWindowChoice::GroupStats => "Group Stats",
+            AddWindowChoice::SkillTotals => "Skill Totals",
             AddWindowChoice::History => "History",
         })
     }
@@ -54,8 +54,8 @@ impl From<&AddWindowChoice> for OverlayWindow {
     fn from(value: &AddWindowChoice) -> Self {
         use super::*;
         match value {
-            AddWindowChoice::GroupDamage => OverlayWindow::new::<GroupDamageWindow>(),
-            AddWindowChoice::IndividualSkills => OverlayWindow::new::<IndividualSkillsWindow>(),
+            AddWindowChoice::GroupStats => OverlayWindow::new::<GroupStatsWindow>(),
+            AddWindowChoice::SkillTotals => OverlayWindow::new::<SkillTotalsWindow>(),
             AddWindowChoice::History => OverlayWindow::new::<HistoryWindow>(),
         }
     }
