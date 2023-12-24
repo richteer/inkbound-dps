@@ -151,9 +151,24 @@ pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
             }
 
             ui.separator();
-            if ui.button("Close Overlay").clicked() {
-                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-            }
+            ui.horizontal(|ui| {
+                if ui.button("Close Overlay").clicked() {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
+                if ui.button("Restart Parser").clicked() {
+                    overlay.logreader.reset();
+                }
+                ui.separator();
+                let status = overlay.logreader.get_status();
+                match status {
+                    logreader::LogReaderStatus::Initializing => {
+                        ui.label(format!("{status}"));
+                        ui.spinner()
+                    },
+                    logreader::LogReaderStatus::Errored => ui.colored_label(egui::Rgba::RED, format!("{status}")),
+                    _ => ui.label(format!("{status}")),
+                };
+            });
 
             if overlay.window_state.color_settings.show {
                 draw_color_settings_window(overlay, ctx);

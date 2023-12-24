@@ -109,5 +109,5 @@ fn main() {
     // Just always use windowed mode in debug builds
     #[cfg(debug_assertions)]
     let mode = overlay::OverlayMode::WindowedOverlay;
-    overlay::spawn_overlay(reader.get_datalog(), mode);
+    overlay::spawn_overlay(reader, mode);
 }

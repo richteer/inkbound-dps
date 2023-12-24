@@ -21,6 +21,7 @@ updater = { version = "0.1.0", path = "../updater", optional = true }
 egui_commonmark = {version = "0.10.1", optional = true }
 typetag = "0.2.14"
 uuid = { version = "1.6.1", features = ["v4", "serde"] }
+logreader = { version = "0.1.0", path = "../logreader" }
 
 [features]
 default = []

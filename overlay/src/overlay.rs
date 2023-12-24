@@ -1,10 +1,11 @@
-use std::{sync::{Arc, RwLock}, collections::{BTreeSet, BTreeMap}};
+use std::collections::{BTreeSet, BTreeMap};
 
 use egui::{Visuals, Pos2, ViewportBuilder, ViewportCommand};
-use inkbound_parser::parser::DataLog;
 use serde::de::DeserializeOwned;
 
 use crate::{windows::{self, WindowDisplay, WindowId, OverlayWindow}, options::OverlayOptions};
+
+use logreader::LogReader;
 
 static OPTIONS_STORAGE_KEY: &'static str = "overlayoptions";
 static WINDOWS_STORAGE_KEY: &'static str = "overlaywindows";
@@ -20,7 +21,7 @@ pub struct WindowState {
 
 // #[derive(Default)]
 pub struct Overlay {
-    pub datalog: Arc<RwLock<DataLog>>,
+    pub logreader: LogReader,
     pub window_state: WindowState,
     pub options: OverlayOptions,
     pub windows: BTreeMap<WindowId, OverlayWindow>,
@@ -63,7 +64,7 @@ fn load_from_storage<T: Default + DeserializeOwned>(storage: Option<&dyn eframe:
 }
 
 impl Overlay {
-    pub fn new(_cc: &eframe::CreationContext<'_>, datalog: Arc<RwLock<DataLog>>) -> Self {
+    pub fn new(_cc: &eframe::CreationContext<'_>, logreader: LogReader) -> Self {
         // Customize egui here with cc.egui_ctx.set_fonts and cc.egui_ctx.set_visuals.
         // Restore app state using cc.storage (requires the "persistence" feature).
         // Use the cc.gl (a glow::Context) to create graphics shaders and buffers that you can use
@@ -105,7 +106,7 @@ impl Overlay {
         }
 
         Self {
-            datalog,
+            logreader,
             window_state,
             options,
             windows,
@@ -192,7 +193,7 @@ pub fn draw_overlay(overlay: &mut Overlay, ctx: &egui::Context) {
     let datalog = {
         // TODO: This seems very wasteful of memory, consider doing some kind of cache
         //  update clone only if data changed, etc
-        overlay.datalog.read().unwrap().clone()
+        overlay.logreader.get_datalog().read().unwrap().clone()
     };
 
     windows::draw_settings_window(overlay, ctx);
@@ -241,7 +242,7 @@ pub enum OverlayMode {
 }
 
 /// Entrypoint for the main application to spawn the actual overlay window and such
-pub fn spawn_overlay(datalog: Arc<RwLock<DataLog>>, mode: OverlayMode) {
+pub fn spawn_overlay(logreader: LogReader, mode: OverlayMode) {
     let viewport = match mode {
         OverlayMode::Overlay =>
             ViewportBuilder::default()
@@ -261,6 +262,6 @@ pub fn spawn_overlay(datalog: Arc<RwLock<DataLog>>, mode: OverlayMode) {
         ..Default::default()
     };
 
-    eframe::run_native("Inkbound Overlay", native_options, Box::new(|c| Box::new(Overlay::new(c, datalog)))).unwrap();
+    eframe::run_native("Inkbound Overlay", native_options, Box::new(|c| Box::new(Overlay::new(c, logreader)))).unwrap();
 }
 
