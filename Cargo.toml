@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "main",
   "inkbound-parser",
+  "logreader",
   "overlay",
   "updater",
 ]

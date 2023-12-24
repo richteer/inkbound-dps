@@ -70,7 +70,7 @@ impl DiveLog {
         }
     }
 
-    fn handle_event(&mut self, event: Event) {
+    pub fn handle_event(&mut self, event: Event) {
         match event.clone() {
             Event::StartCombat(_) => self.combats.insert(0, CombatLog::new()),
             Event::DamageDealt(_, dmg) => self.player_stats.apply_dealt_damage(dmg),

@@ -4,24 +4,11 @@
     windows_subsystem = "windows"
 )]
 use clap::{command, arg};
-use inkbound_parser::{
-    parser::{*},
-    parse_log_to_json,
-};
+use inkbound_parser::parse_log_to_json;
 
-use std::{sync::{Arc, RwLock}, io::BufReader, fs::File, time::Duration, path::Path};
-use std::io::{
-    Seek,
-    BufRead
-};
+use std::time::Duration;
 
-use notify::{Watcher, RecursiveMode};
-
-struct LogReader {
-    reader: BufReader<File>,
-    cache_string: String,
-    cache_events: Vec<inkbound_parser::parser::Event>,
-}
+use logreader::LogReader;
 
 #[inline(always)]
 fn default_logpath() -> String {
@@ -37,46 +24,6 @@ fn default_logpath() -> String {
 
         #[cfg(target_os = "linux")]
         return format!("{}/.steam/steam/steamapps/compatdata/1062810/pfx/drive_c/users/steamuser/AppData/LocalLow/Shiny Shoe/Inkbound/logfile.log", std::env::var("HOME").unwrap());
-    }
-}
-
-impl LogReader {
-    fn new(filepath: &str) -> Self {
-        let file = File::open(filepath).unwrap(); // TODO: unwrap
-
-        let reader = std::io::BufReader::new(file);
-        Self {
-            reader,
-            cache_string: String::new(),
-            cache_events: Vec::new(),
-        }
-    }
-
-    // TODO: consider having LogReader contain the LogParser. LogParser may not need to be shared
-    fn reader_to_datalog(&mut self, parser: &Arc<RwLock<LogParser>>, datalog: &Arc<RwLock<DataLog>>) {
-        let mut parser = parser.write().unwrap();
-
-        while self.reader.read_line(&mut self.cache_string).is_ok_and(|size| size != 0) {
-            log::trace!("parsing: {}", self.cache_string);
-            if let Some(event) = parser.parse_line(&self.cache_string.as_str()) {
-                self.cache_events.push(event);
-                // datalog.handle_event(event);
-            }
-            self.cache_string.clear();
-        }
-
-        // Events collected, now acquire write lock to update the datalog
-        {
-            let mut datalog = datalog.write().unwrap();
-            // TODO: consider changing .handle_events to accept an iterator
-            for event in self.cache_events.drain(..) {
-                datalog.handle_event(event);
-            }
-        }
-    }
-
-    fn seek_end(&mut self) {
-        self.reader.seek(std::io::SeekFrom::End(0)).unwrap();
     }
 }
 
@@ -142,76 +89,19 @@ fn main() {
         return
     }
 
-    let parser = Arc::new(RwLock::new(LogParser::new()));
-    let datalog = Arc::new(RwLock::new(DataLog::new()));
-
     let filepath = if let Some(filepath) = matches.get_one::<String>("file") {
         filepath.to_owned()
     } else {
         default_logpath()
     };
-    let mut reader = LogReader::new(filepath.as_str());
 
-    // Catch the parser/log up...
-    let (backlog_tx, backlog_rx) = std::sync::mpsc::channel();
-    {
-        let datalog = datalog.clone();
-        let parser = parser.clone();
-        let skip = matches.get_flag("skip-current");
-
-        std::thread::spawn(move || {
-            if skip {
-                log::debug!("skipping backlog");
-                reader.seek_end();
-            } else {
-                log::debug!("reading from backlog");
-                reader.reader_to_datalog(&parser, &datalog);
-            }
-            backlog_tx.send(reader).unwrap();
-        });
-    }
-
-    let (tx, rx) = std::sync::mpsc::channel();
-
-    // ...then start the watcher
-    let watch_handle = {
-        let parser = parser.clone();
-        let datalog = datalog.clone();
-        std::thread::spawn(move || {
-            log::debug!("waiting to receive reader from backlog thread...");
-            let mut reader = backlog_rx.recv().unwrap();
-            drop(backlog_rx);
-            log::debug!("received reader");
-
-            log::debug!("spawning watcher receive thread");
-            loop {
-                match rx.recv() {
-                    Ok(Ok(_events)) => {
-                        log::trace!("file update received");
-                        reader.reader_to_datalog(&parser, &datalog);
-                    },
-                    Ok(Err(e)) => {
-                        log::error!("Error from watcher: {:?}, closing thread", e);
-                        break;
-                    },
-                    Err(_) => {
-                        log::debug!("channel closed, exiting watch recv loop");
-                        break;
-                    },
-                };
-            }
-            log::debug!("closing watch recv thread");
-        })
-    };
+    let skip_current = matches.get_flag("skip-current");
+    let reader = LogReader::new(filepath.clone(), Duration::from_secs(2), skip_current);
 
     log::info!("starting watch of file: {}", filepath);
 
-    // TODO: allow configuration of poll duration
-    let mut watcher = notify::PollWatcher::new(tx, notify::Config::default().with_poll_interval(Duration::from_secs(2))).unwrap();
-    watcher.watch(Path::new(filepath.as_str()), RecursiveMode::NonRecursive).unwrap();
-
     #[cfg(not(debug_assertions))]
-    let mode = if matches.get_flag("windowed"){
+    let mode = if matches.get_flag("windowed") {
         overlay::OverlayMode::WindowedOverlay
     } else {
         overlay::OverlayMode::Overlay
@@ -219,9 +109,5 @@ fn main() {
     // Just always use windowed mode in debug builds
     #[cfg(debug_assertions)]
     let mode = overlay::OverlayMode::WindowedOverlay;
-    overlay::spawn_overlay(datalog, mode);
-
-    // Overlay closed, exit and clean-up
-    drop(watcher); // Drop to close the watch recv thread loop
-    watch_handle.join().unwrap();
+    overlay::spawn_overlay(reader.get_datalog(), mode);
 }
