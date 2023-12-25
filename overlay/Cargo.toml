@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 egui = "0.24.1"
 egui_plot = "0.24.1"
+egui_extras = "0.24.2"
 inkbound-parser.workspace = true
 log.workspace = true
 serde.workspace = true
@@ -22,6 +23,7 @@ egui_commonmark = {version = "0.10.1", optional = true }
 typetag = "0.2.14"
 uuid = { version = "1.6.1", features = ["v4", "serde"] }
 logreader = { version = "0.1.0", path = "../logreader" }
+lazy_static.workspace = true
 
 [features]
 default = []

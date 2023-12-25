@@ -10,6 +10,7 @@ members = [
 
 [workspace.dependencies]
 inkbound-parser = { path = "./inkbound-parser" }
+lazy_static = "1.4.0"
 log = "0.4.20"
 serde = { version = "1.0.190", features = ["derive"] }
 strum = { version = "0.25.0", features = ["derive"] }

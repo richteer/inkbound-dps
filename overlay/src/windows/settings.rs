@@ -37,6 +37,7 @@ enum AddWindowChoice {
     GroupStats,
     SkillTotals,
     History,
+    StatTable,
 }
 
 impl std::fmt::Display for AddWindowChoice {
@@ -46,6 +47,7 @@ impl std::fmt::Display for AddWindowChoice {
             AddWindowChoice::GroupStats => "Group Stats",
             AddWindowChoice::SkillTotals => "Skill Totals",
             AddWindowChoice::History => "History",
+            AddWindowChoice::StatTable => "Table",
         })
     }
 }
@@ -57,6 +59,7 @@ impl From<&AddWindowChoice> for OverlayWindow {
             AddWindowChoice::GroupStats => OverlayWindow::new::<GroupStatsWindow>(),
             AddWindowChoice::SkillTotals => OverlayWindow::new::<SkillTotalsWindow>(),
             AddWindowChoice::History => OverlayWindow::new::<HistoryWindow>(),
+            AddWindowChoice::StatTable => OverlayWindow::new::<StatTableWindow>(),
         }
     }
 }

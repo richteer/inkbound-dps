@@ -13,6 +13,9 @@ pub use group_stats::*;
 mod history;
 pub use history::*;
 
+mod stat_table;
+pub use stat_table::*;
+
 pub mod extractors;
 
 use serde::{Deserialize, Serialize};
