@@ -17,6 +17,10 @@ fn extract_total_damage_received(player: &PlayerStats) -> ExtractType {
     player.total_damage_received as ExtractType
 }
 
+fn extract_percent_crit_damage(player: &PlayerStats) -> ExtractType {
+    extract_total_crit_damage_dealt(player) / player.total_damage_dealt as ExtractType * 100.0
+}
+
 fn extract_status_effect_applied(player: &PlayerStats, status: &str) -> ExtractType {
     *player.status_applied.get(status).unwrap_or(&0) as ExtractType
 }
@@ -39,6 +43,7 @@ pub enum StatExtractionFunc {
     TotalDamageDealt,
     TotalCritDamageDealt,
     TotalDamageReceived,
+    PercentCritDamage,
     StatusEffectApplied(String),
     OrbCount,
     DamagePerOrb,
@@ -50,6 +55,7 @@ impl std::fmt::Display for StatExtractionFunc {
             StatExtractionFunc::TotalDamageDealt => "Damage Dealt".to_string(),
             StatExtractionFunc::TotalCritDamageDealt => "Crit Damage Dealt".to_string(),
             StatExtractionFunc::TotalDamageReceived => "Damage Received".to_string(),
+            StatExtractionFunc::PercentCritDamage => "Percent Crit Damage".to_string(),
             StatExtractionFunc::StatusEffectApplied(status) => 
                 if status.is_empty() {
                     "Status Effect Applied".to_string()
@@ -70,6 +76,7 @@ impl StatExtractionFunc {
             StatExtractionFunc::TotalDamageDealt => extract_total_damage_dealt(player),
             StatExtractionFunc::TotalCritDamageDealt => extract_total_crit_damage_dealt(player),
             StatExtractionFunc::TotalDamageReceived => extract_total_damage_received(player),
+            StatExtractionFunc::PercentCritDamage => extract_percent_crit_damage(player),
             StatExtractionFunc::StatusEffectApplied(status) => extract_status_effect_applied(player, &status),
             StatExtractionFunc::OrbCount => extract_orb_count(player),
             StatExtractionFunc::DamagePerOrb => extract_damage_per_orb(player),
