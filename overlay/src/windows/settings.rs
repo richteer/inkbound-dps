@@ -133,10 +133,6 @@ pub fn draw_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
             }
 
             ui.separator();
-            ui.horizontal(|ui| {
-                ui.label("Default Player Name");
-                ui.text_edit_singleline(&mut overlay.options.default_player_name);
-            }).response.on_hover_text("Enter a player name to set as the default if no player is selected in an individual damage window.\n\nYou probably want to set this to your in-game character name.");
             ui.add(egui::Slider::new(&mut overlay.options.plot_font_size, 4.0..=32.0).text("Plot font size"))
                 .on_hover_text("Set the font size for the damage plot labels.");
             ui.checkbox(&mut overlay.options.show_crit_bars, "Show Crit Bars")

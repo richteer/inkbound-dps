@@ -6,7 +6,6 @@ use crate::DefaultColor;
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
 pub struct OverlayOptions {
-    pub default_player_name: String,
     pub plot_font_size: f32,
     pub show_crit_bars: bool,
     pub crit_bar_opacity: u8,
@@ -18,7 +17,6 @@ pub struct OverlayOptions {
 impl Default for OverlayOptions {
     fn default() -> Self {
         Self {
-            default_player_name: "".to_string(),
             plot_font_size: 14.0,
             show_crit_bars: false,
             crit_bar_opacity: 128,
