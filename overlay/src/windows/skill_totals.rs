@@ -107,9 +107,9 @@ fn clean_skill_name<'a>(name: &str) -> String {
     name
         .replace("_BaseDamage", "")
         .replace("_DamageBase", "")
-        .replace("_Damage","")
+        .replace("Damage","")
         .replace("_StatusEffect", "")
-        .replace("Upgrade","")
+        .replace("_Legendary","")
         .replace("_"," ")
         .trim()
         .to_string()
@@ -117,12 +117,12 @@ fn clean_skill_name<'a>(name: &str) -> String {
 
 #[inline]
 fn fancy_skill_name<'a>(name: &String) -> String {
-    clean_skill_name(&name.replace("Legendary", "➡"))
+    clean_skill_name(&name.replace("Upgrade", " ➡"))
 }
 
 #[inline]
 fn split_skill_name<'a>(name: &String) -> (String, Option<String>) {
-    if let Some(name) = name.split_once("Legendary") {
+    if let Some(name) = name.split_once("Upgrade") {
         (clean_skill_name(name.0), Some(clean_skill_name(name.1)))
     } else {
         (clean_skill_name(name), None)
