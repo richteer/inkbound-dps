@@ -29,6 +29,7 @@ pub struct SkillTotalsWindow {
     player: Option<String>,
     #[derivative(Default(value = "DEFAULT_FORMAT.to_string()"))]
     format: String,
+    merge_upgrades: bool,
 }
 
 impl PlayerSelection for SkillTotalsWindow {
@@ -63,6 +64,8 @@ impl WindowDisplay for SkillTotalsWindow {
             if let Some(player_stats) = player_stats {
                 self.show_player_selection_box(ui, player_stats);
             }
+            ui.checkbox(&mut self.merge_upgrades, "Merge Upgraded Skills")
+                .on_hover_text("Merge base and upgraded skills into one bar.\n\nNOTE: This may not work with all skills, those with inconsistent naming may not merge properly.");
             self.show_format_selection_box(ui);
         });
 
@@ -211,6 +214,33 @@ impl SkillTotalsWindow {
             player_stats.crit_totals.iter().for_each(|(k, crit_dmg)| { skill_totals.entry(k.clone())
                 .and_modify(|elem| elem.1 += crit_dmg)
                 .or_insert((0, *crit_dmg)); } );
+        }
+
+        if self.merge_upgrades {
+            // Create a "super" map, of "base skill name" -> "full skill name" -> totals
+
+            // First add only skills that have an upgrade
+            let mut name_map: HashMap<String, (String, (i64, i64))> = skill_totals.keys()
+                .filter_map(|k|
+                    if let (base, Some(_upgrade)) = split_skill_name(k) {
+                        Some((base, (k.clone(), (0,0))))
+                    } else {
+                        None
+                    }
+                ).collect();
+
+            // Now fold in all the other skills. Non-upgraded skills will be added,
+            //  and base skills will be folded into the upgraded variant
+            for (label, &(dmg, crit)) in skill_totals.iter() {
+                name_map.entry(split_skill_name(label).0)
+                    .and_modify(|(_key, (vdmg, vcrit))| {
+                        *vdmg += dmg;
+                        *vcrit += crit;
+                    })
+                    .or_insert((label.clone(), (dmg, crit)));
+            }
+
+            skill_totals = name_map.into_values().collect();
         }
 
         // let mut skill_totals: Vec<(String, i64)> = player_stats.skill_totals.clone().into_iter().collect();
