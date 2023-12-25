@@ -1,14 +1,17 @@
 use std::collections::HashMap;
 
+use derivative::Derivative;
 use egui::Ui;
 use egui_plot::{Plot, BarChart, Bar, Text, PlotPoint};
 use inkbound_parser::parser::{PlayerStats, DataLog};
+use interpolator::Formattable;
 use serde::{Deserialize, Serialize};
 
 use crate::OverlayOptions;
 
-use super::{WindowDisplay, DiveCombatSelection, DiveCombatSplit, DiveCombatSelectionState, PlayerSelection, PlayerDiveCombatOptions};
+use super::{WindowDisplay, DiveCombatSelection, DiveCombatSplit, DiveCombatSelectionState, PlayerSelection, FormatSelection};
 
+static DEFAULT_FORMAT: &'static str = "  {fancy} - {dmg} ({dmg_percent:.2}%)";
 
 #[derive(Default, Debug)]
 pub struct SkillTotalsState {
@@ -16,13 +19,16 @@ pub struct SkillTotalsState {
     pub combat: usize,
 }
 
-#[derive(Default, Deserialize, Serialize, Debug)]
+#[derive(Derivative, Deserialize, Serialize, Debug)]
 #[serde(default)]
+#[derivative(Default)]
 pub struct SkillTotalsWindow {
     #[serde(skip)]
     state: DiveCombatSelectionState,
     mode: DiveCombatSelection,
     player: Option<String>,
+    #[derivative(Default(value = "DEFAULT_FORMAT.to_string()"))]
+    format: String,
 }
 
 impl PlayerSelection for SkillTotalsWindow {
@@ -48,7 +54,17 @@ impl DiveCombatSplit for SkillTotalsWindow {
 #[typetag::serde]
 impl WindowDisplay for SkillTotalsWindow {
     fn show(&mut self, ui: &mut egui::Ui, options: &OverlayOptions, data: &DataLog) {
-        self.show_options(ui, data);
+        ui.collapsing("⛭", |ui| {
+            let player_stats = self.get_current_player_stat_list(data);
+
+            self.mode_selection(ui);
+            self.show_selection_boxes(ui, data);
+
+            if let Some(player_stats) = player_stats {
+                self.show_player_selection_box(ui, player_stats);
+            }
+            self.show_format_selection_box(ui);
+        });
 
         let player_stats = self.get_current_player_stat_list(data);
         let player_stats = if let Some(player_stats) = player_stats {
@@ -82,15 +98,104 @@ impl WindowDisplay for SkillTotalsWindow {
     }
 }
 
+// TODO: probably optimize this, it's probably slow
 #[inline]
-fn clean_skill_name<'a>(name: &String) -> String {
+fn clean_skill_name<'a>(name: &str) -> String {
     name
-        .replace("Damage","")
+        .replace("_BaseDamage", "")
+        .replace("_DamageBase", "")
+        .replace("_Damage","")
+        .replace("_StatusEffect", "")
         .replace("Upgrade","")
-        .replace("Legendary", "➡")
         .replace("_"," ")
         .trim()
         .to_string()
+}
+
+#[inline]
+fn fancy_skill_name<'a>(name: &String) -> String {
+    clean_skill_name(&name.replace("Legendary", "➡"))
+}
+
+#[inline]
+fn split_skill_name<'a>(name: &String) -> (String, Option<String>) {
+    if let Some(name) = name.split_once("Legendary") {
+        (clean_skill_name(name.0), Some(clean_skill_name(name.1)))
+    } else {
+        (clean_skill_name(name), None)
+    }
+}
+
+impl FormatSelection for SkillTotalsWindow {
+    fn get_format<'a>(&'a mut self) -> &'a mut String {
+        &mut self.format
+    }
+
+    fn default_format() -> &'static str {
+        DEFAULT_FORMAT
+    }
+
+    fn hover_text() -> &'static str {
+        "Valid options:
+{fancy}: Name of the skill + Upgrade name if upgraded
+  e.g. Flurry ➡ Barrage
+{name}: Name of the skill. Base name if base skill, upgraded name if upgraded.
+  e.g. Barrage
+{base}: Base, non-upgraded name of the skill
+  e.g. Flurry
+{label}: Raw name of the skill, you probably don't want this
+
+{dmg}: Damage dealt by the skill
+{dmg_percent}: Percentage of overall damage dealt by the skill
+{crit}: Damage dealt by the skill as a crit
+{crit_dmg_percent}: Percentage damage dealt by this skill as a crit
+{crit_total_percent}: Percentage of overall damage dealt by this skill as a crit
+"
+    }
+}
+
+struct SkillInfo {
+    label: String,
+    name: String,
+    base: String,
+    fancy: String,
+    dmg: i64,
+    dmg_percent: f64,
+    crit: i64,
+    crit_dmg_percent: f64,
+    crit_total_percent: f64,
+}
+
+impl SkillInfo {
+    pub fn new(name: &String, dmg: i64, crit: i64, total_dmg: i64) -> Self {
+        let (base, upgrade) = split_skill_name(name);
+
+        Self {
+            label: name.clone(),
+            name: upgrade.unwrap_or_else(|| base.clone()),
+            base,
+            fancy: fancy_skill_name(name),
+            dmg,
+            dmg_percent: dmg as f64 / total_dmg as f64 * 100.0,
+            crit,
+            crit_dmg_percent: crit as f64 / dmg as f64 * 100.0,
+            crit_total_percent: crit as f64 / total_dmg as f64 * 100.0,
+        }
+    }
+
+    pub fn to_map(&self) -> HashMap<&str, Formattable> {
+        [
+            ("label",              Formattable::display(&self.label)),
+            ("name",               Formattable::display(&self.name)),
+            ("base",               Formattable::display(&self.base)),
+            ("fancy",              Formattable::display(&self.fancy)),
+            ("dmg",                Formattable::integer(&self.dmg)),
+            ("dmg_percent",        Formattable::float(&self.dmg_percent)),
+            ("crit",               Formattable::integer(&self.crit)),
+            ("crit_dmg_percent",   Formattable::float(&self.crit_dmg_percent)),
+            ("crit_total_percent", Formattable::float(&self.crit_total_percent)),
+        ].into_iter().collect()
+    }
 }
 
 
@@ -118,10 +223,11 @@ impl SkillTotalsWindow {
             }
         });
 
+        let total_damage = player_stats.total_damage_dealt;
         let bar_color = options.colors.get_aspect_color(&player_stats.player_data.class);
-            let bars = if options.show_crit_bars {
-            skill_totals.iter().enumerate().map(|(index, (_, (dmg, crit)))| {
-                [
+        let (bars, texts): (Vec<[Bar; 2]>, Vec<SkillInfo>) =
+            skill_totals.iter().enumerate().map(|(index, (name, (dmg, crit)))| {
+                ([
                     Bar::new(index as f64, *dmg as f64)
                         .width(1.0)
                         .fill(bar_color)
@@ -129,31 +235,24 @@ impl SkillTotalsWindow {
                     Bar::new(index as f64, *crit as f64)
                         .width(1.0)
                         .fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, options.crit_bar_opacity))
-                ]
-            }).flatten().collect()
-        } else {
-            skill_totals.iter().enumerate().map(|(index, (_, (dmg, _crit)))| {
-                Bar::new(index as f64, *dmg as f64)
-                    .width(1.0)
-                    .fill(bar_color)
-            }).collect()
-        };
+                ],
+                    SkillInfo::new(name, *dmg, *crit, total_damage)
+                )
+            }).collect::<Vec<([Bar; 2], SkillInfo)>>().into_iter().unzip();
 
         let texts: Vec<Text> = {
-            skill_totals.iter().enumerate().map(|(index, (name, (dmg, _crit)))| {
+            texts.into_iter().enumerate().map(|(index, info)| {
+                let args = info.to_map();
                 Text::new(
                     PlotPoint { x: 0.0, y: index as f64 },
-                    format!("  {} - {} ({:.2}%)",
-                        clean_skill_name(name),
-                        dmg,
-                        *dmg as f64 / player_stats.total_damage_dealt as f64 * 100.0,
-                    )
+                    interpolator::format(&self.format, &args).unwrap_or(self.format.clone())
                 )
                 .anchor(egui::Align2::LEFT_CENTER)
                 .color(egui::Color32::WHITE)
             }).collect()
         };
 
+        let bars = bars.into_iter().flatten().collect();
         let chart = BarChart::new(bars)
             .horizontal()
         ;
