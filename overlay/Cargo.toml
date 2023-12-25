@@ -24,6 +24,8 @@ typetag = "0.2.14"
 uuid = { version = "1.6.1", features = ["v4", "serde"] }
 logreader = { version = "0.1.0", path = "../logreader" }
 lazy_static.workspace = true
+interpolator = { version = "0.5.0", features = ["number"] }
+derivative = "2.2.0"
 
 [features]
 default = []

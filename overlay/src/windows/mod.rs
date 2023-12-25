@@ -231,4 +231,56 @@ pub trait PlayerDiveCombatOptions: DiveCombatSplit + PlayerSelection {
 // Automatically implement PlayerDiveCombatOptions for windows that implement both dive/combat and player selection
 impl<T> PlayerDiveCombatOptions for T where T: DiveCombatSplit + PlayerSelection {}
 
+static FORMAT_SELECTION_HELP: &'static str =
+"Enter a text formatter string, and all valid patterns contained in {braces} will be filled with its respective value.
+Any other characters will be printed verbatim. See the box below for a list of valid patterns.
+    NOTE: entering an invalid {pattern} will cause the whole format string to fail.
+
+Some fmt-like specifications may also be used.
+For example, to print a float with only two decimal places, use:
+{value:.2}
+";
+pub trait FormatSelection {
+    fn get_format<'a>(&'a mut self) -> &'a mut String;
+    fn default_format() -> &'static str;
+    fn hover_text() -> &'static str;
+
+    fn show_format_selection_box(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.label("ℹ")
+                .on_hover_text(FORMAT_SELECTION_HELP)
+                .on_hover_text(Self::hover_text());
+            ui.text_edit_singleline(self.get_format());
+            let reset = egui::Label::new("⟲").sense(egui::Sense::click());
+            if ui.add(reset).on_hover_text("Reset to default.").clicked() {
+                *self.get_format() = Self::default_format().to_string();
+            }
+        });
+    }
+}
+
+// TODO: Consider just putting this in parser Aspect?
+pub trait AspectAbbv {
+    fn abbv(&self) -> String;
+}
+
+use inkbound_parser::aspects::Aspect;
+impl AspectAbbv for Aspect {
+    /// Get an abbreviated name for the aspect.
+    // TODO: consider allowing users to define these?
+    fn abbv(&self) -> String {
+        match self {
+            Aspect::MagmaMiner => "MGM",
+            Aspect::Mosscloak => "MSC",
+            Aspect::Weaver => "WVR",
+            Aspect::Obelisk => "OBE",
+            Aspect::Clairvoyant => "CLV",
+            Aspect::StarCaptain => "STC",
+            Aspect::Chainbreaker => "CHB",
+            Aspect::Godkeeper => "GKR",
+            Aspect::Unknown(_) => "UNK",
+        }.to_string()
+    }
+}
+
 static NO_DATA_MSG: &'static str = "Waiting for data...";

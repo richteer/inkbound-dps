@@ -1,8 +1,13 @@
+use std::collections::HashMap;
+
 use egui::Ui;
 use egui_plot::{Text, PlotPoint, BarChart, Plot, Bar};
 use inkbound_parser::parser::{PlayerStats, DataLog};
 use serde::{Deserialize, Serialize};
-use super::extractors::{StatSelection, StatSelectionState};
+use interpolator::*;
+use derivative::Derivative;
+
+use super::{extractors::{StatSelection, StatSelectionState}, FormatSelection, AspectAbbv};
 
 use crate::OverlayOptions;
 
@@ -14,13 +19,16 @@ pub struct GroupStatsState {
     pub combat: usize,
 }
 
-#[derive(Default, Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Derivative)]
 #[serde(default)]
+#[derivative(Default)]
 pub struct GroupStatsWindow {
     #[serde(skip)]
     state: DiveCombatSelectionState,
     mode: DiveCombatSelection,
     stat_selection: StatSelectionState,
+    #[derivative(Default(value = "DEFAULT_FORMAT.to_string()"))]
+    format: String,
 }
 
 #[typetag::serde]
@@ -30,6 +38,7 @@ impl WindowDisplay for GroupStatsWindow {
             self.mode_selection(ui);
             self.show_selection_boxes(ui, data);
             self.show_stat_selection_box(ui);
+            self.show_format_selection_box(ui);
         });
 
         if let Some(stats) = self.get_current_player_stat_list(data) {
@@ -68,6 +77,59 @@ impl StatSelection for GroupStatsWindow {
     }
 }
 
+impl FormatSelection for GroupStatsWindow {
+    fn get_format<'a>(&'a mut self) -> &'a mut String {
+        &mut self.format
+    }
+
+    fn default_format() -> &'static str {
+        DEFAULT_FORMAT
+    }
+
+    fn hover_text() -> &'static str {
+        "Valid options:
+{name}: Name of the player
+{stat}: Value of the selected stat
+{percent}: Percent of the group's total stat
+{class}: Player's class
+{cls}: Abbreviated player's class
+"
+    }
+}
+
+static DEFAULT_FORMAT: &'static str = "  {name} - {stat} ({percent:.2}%)";
+
+struct StatInfo {
+    name: String,
+    stat: f64,
+    percent: f64,
+    class: String,
+    cls: String,
+}
+
+impl StatInfo {
+    pub fn new(stats: &PlayerStats, stat: f64, total: f64) -> Self {
+        Self {
+            name: stats.player_data.name.clone(),
+            stat,
+            percent: stat / total * 100.0,
+            class: stats.player_data.class.to_string(),
+            cls: stats.player_data.class.abbv(),
+        }
+    }
+
+    pub fn to_map<'a>(&'a self) -> HashMap<&str, Formattable<'a>> {
+        [
+            ("name", Formattable::display(&self.name)),
+            ("stat", Formattable::float(&self.stat)),
+            ("percent", Formattable::float(&self.percent)),
+            ("class", Formattable::display(&self.class)),
+            ("cls", Formattable::display(&self.cls)),
+        ].into_iter().collect()
+    }
+}
+
+
 impl GroupStatsWindow {
     /// Helper to draw the plot for group damage stats
     #[inline]
@@ -84,16 +146,12 @@ impl GroupStatsWindow {
         };
         let texts: Vec<Text> = {
             statlist.iter().enumerate().map(|(index, stats)| {
-                let stat = self.extract_stat(stats);
+                let info = StatInfo::new(stats, self.extract_stat(stats), total_stat);
+                let args = info.to_map();
+
                 Text::new(
                     PlotPoint { x: 0.0, y: index as f64 },
-                    format!("  {} - {:.*} ({:.2}%)",
-                        stats.player_data.name,
-                        // TODO: temporary measure, this should probably be handled by user-formatting
-                        if stat.trunc() == stat { 0 } else { 2 },
-                        stat,
-                        if total_stat != 0.0 { stat / total_stat * 100.0 } else { 0.0 },
-                    )
+                    interpolator::format(&self.format, &args).unwrap_or(self.format.clone())
                 )}
                 .anchor(egui::Align2::LEFT_CENTER)
                 .color(egui::Color32::WHITE)
