@@ -8,7 +8,6 @@ pub struct UpdateState {
 }
 
 pub fn updater_settings(ui: &mut egui::Ui, overlay: &mut Overlay) {
-    ui.separator();
     ui.checkbox(&mut overlay.options.auto_check_update, "Check for update on start")
         .on_hover_text("Check for an update when the application loads.\nThis will NOT automatically apply, you will still need to click the update button.");
 
