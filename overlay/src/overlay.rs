@@ -11,6 +11,10 @@ static OPTIONS_STORAGE_KEY: &'static str = "overlayoptions";
 static WINDOWS_STORAGE_KEY: &'static str = "overlaywindows";
 static ENABLED_WINDOWS_STORAGE_KEY: &'static str = "overlayenabledwindows";
 
+// Convenience types to hide clutter and re-use in tests
+type WindowConfig = BTreeMap<WindowId, OverlayWindow>;
+type EnabledWindowConfig = BTreeSet<WindowId>;
+
 #[derive(Default)]
 pub struct WindowState {
     pub settings: windows::SettingsState,
@@ -24,11 +28,11 @@ pub struct Overlay {
     pub logreader: LogReader,
     pub window_state: WindowState,
     pub options: OverlayOptions,
-    pub windows: BTreeMap<WindowId, OverlayWindow>,
-    pub enabled_windows: BTreeSet<WindowId>,
+    pub windows: WindowConfig,
+    pub enabled_windows: EnabledWindowConfig,
 }
 
-pub fn default_windows() -> BTreeMap<WindowId, OverlayWindow> {
+pub fn default_windows() -> WindowConfig {
     use crate::windows::*;
     let windows = vec![
         GroupStatsWindow::window_from_mode(DiveCombatSelection::Dive),
@@ -81,7 +85,7 @@ impl Overlay {
             (default_windows(), BTreeSet::new())
         } else {
             // Otherwise handle the rest of the loads
-            let windows: BTreeMap<WindowId, OverlayWindow> = load_from_storage(_cc.storage, WINDOWS_STORAGE_KEY).unwrap_or_default();
+            let windows: WindowConfig = load_from_storage(_cc.storage, WINDOWS_STORAGE_KEY).unwrap_or_default();
             let enabled_windows = load_from_storage(_cc.storage, ENABLED_WINDOWS_STORAGE_KEY).unwrap_or_default();
             (windows, enabled_windows)
         };
@@ -265,3 +269,25 @@ pub fn spawn_overlay(logreader: LogReader, mode: OverlayMode) {
     eframe::run_native("Inkbound Overlay", native_options, Box::new(|c| Box::new(Overlay::new(c, logreader)))).unwrap();
 }
 
+
+#[cfg(test)]
+mod tests {
+
+    use std::collections::HashMap;
+    use crate::OverlayOptions;
+    use super::*;
+
+    static EXAMPLE: &str = include_str!("test_storage.ron");
+
+    #[test]
+    fn test_storage_break() {
+        let storage: HashMap<String, String> = ron::de::from_str(EXAMPLE).expect("Failed to parse example ron");
+
+        ron::from_str::<OverlayOptions>(storage.get(OPTIONS_STORAGE_KEY)
+            .expect(&format!("no {OPTIONS_STORAGE_KEY} in example"))).unwrap();
+        ron::from_str::<WindowConfig>(storage.get(WINDOWS_STORAGE_KEY)
+            .expect(&format!("no {WINDOWS_STORAGE_KEY} in example"))).unwrap();
+        ron::from_str::<EnabledWindowConfig>(storage.get(ENABLED_WINDOWS_STORAGE_KEY)
+            .expect(&format!("no options in example"))).unwrap();
+    }
+}
