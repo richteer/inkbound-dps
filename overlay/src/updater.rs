@@ -40,7 +40,9 @@ pub fn updater_settings(ui: &mut egui::Ui, overlay: &mut Overlay) {
                 let new_version = ui.colored_label(egui::Color32::GREEN, format!("New version available! {current_version} ➡ {version}"));
                 if let Some(body) = body {
                     new_version.on_hover_ui(|ui| {
-                        egui_commonmark::CommonMarkViewer::new("HoverChangelog").show(ui, &mut overlay.window_state.update.cache, &body);
+                        egui::ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
+                            egui_commonmark::CommonMarkViewer::new("HoverChangelog").show(ui, &mut overlay.window_state.update.cache, &body);
+                        });
                     });
                 }
             });
