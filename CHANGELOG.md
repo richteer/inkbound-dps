@@ -2,6 +2,71 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2023-12-29
+
+### Bug Fixes
+
+- *(main)* Re-enable stdout/stderr logging in windows debug builds
+- *(overlay)* Fix overlay crashing when minimized
+- *(overlay/individual)* Fix dive individual damage window not displaying until combat has started
+- *(overlay/skilltotals)* Hopefully fix some non-legendary bindings not being detected as upgraded
+
+
+### Features
+
+- *(overlay)*  **BREAKING:** Add support for creating (and deleting) multiple windows of the same type
+- *(overlay)* Windows now contain their options in a collapsable header
+- *(overlay)* Add button to restart the log parser, show parser state in settings
+- *(overlay)* Add new stat table window
+- *(overlay/extractors)* Add percent crit damage stat option
+- *(overlay/group)* Add ability to select what stat the group window displays
+- *(overlay/group)* Add option for custom format strings to group stats
+- *(overlay/history)* Implement stat selection for history
+- *(overlay/history)* Add percent mode for history
+- *(overlay/skilltotals)* Add option for custom format strings to skill totals
+- *(overlay/skilltotals)* Add option to merge upgraded skills
+- *(overlay/updater)* Add full changelog viewer when clicking on version
+- *(parser)* Add support for parsing orb pickups
+- *(parser)* Add detection for point-of-view player
+- *(parser)* Add support for parsing status effect applications
+- Add -w/--window argument to overlay in a window
+
+
+### Miscellaneous Tasks
+
+- *(build)* Build the parser library and all dependencies with optimizations in debug builds
+- *(cliff)* Adjust cliff breaking format
+- *(overlay)* Serde-defaultify all the persisted structs
+
+
+### Refactor
+
+- *(main)* Move all log reading -> parsing logic into its own crate
+- *(overlay)*  **BREAKING:** Window overhaul part 1: move to using a trait-based display method
+- *(overlay)*  **BREAKING:** Window overhaul part 2: re-enable persisting windows
+- *(overlay)*  **BREAKING:** Merge individual combat and dive windows
+- *(overlay)*  **BREAKING:** Merge group damage dive and combat windows
+- *(overlay)*  **BREAKING:** Factor out dive/combat selection logic
+- *(overlay)* Remove now-useless default player name option
+- *(overlay/extractor)* Merge status effects into one extractor, add extra status effect selection option
+- *(overlay/extractors)* Add trait for stat selection, so that the options and behaviors can be reused
+- *(overlay/extractors)* Have status effects applied carry the status in the enum, have the enum implement extract stat
+
+
+### Styling
+
+- *(history)* Use selectable values instead of combobox for mode, re-enable totals in percent mode
+- *(overlay)* Wait until data exists to show dive/combat/etc selectors, display a waiting message when there is no data to render yet
+- *(overlay/skills)* Clean up skill names
+- *(overlay/updater)* Remove unnecessary duplicate separator inside updater settings
+- (overlay/updater): put the fetched changelog in a scroll area to avoid a large tooltip
+
+
+### Testing
+
+- *(overlay)* Add test case for catching config breakage
+
+
 ## [0.2.5] - 2023-12-05
 
 ### Miscellaneous Tasks
