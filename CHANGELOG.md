@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2023-12-30
+
+### Bug Fixes
+
+- *(overlay)* Disable mouse passthrough in windowed mode
+
+
+### Features
+
+- *(overlay)* Add spiked as a viewable status effect
+
+
+### Miscellaneous Tasks
+
+- *(cliff)* Add new skipped category for clippy fixes
+
+
+### Styling
+
+- *(overlay)* Change NaN% to 0% when there is no data to be displayed
+
+
 ## [0.3.0] - 2023-12-29
 
 ### Bug Fixes
