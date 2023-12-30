@@ -57,7 +57,7 @@ impl Updater {
         self.options = options;
     }
 
-    fn build_update(current_version: &String, options: UpdaterOptions) -> Box<dyn ReleaseUpdate> {
+    fn build_update(current_version: &str, options: UpdaterOptions) -> Box<dyn ReleaseUpdate> {
         self_update::backends::github::Update::configure()
             // TODO: Consider metadata-ing these
             .repo_owner("richteer")
@@ -65,7 +65,7 @@ impl Updater {
             .bin_name("inkbound-dps")
             .show_download_progress(options.show_download_progress)
             .no_confirm(options.no_confirm)
-            .current_version(&current_version)
+            .current_version(current_version)
             .build().unwrap()
     }
 
