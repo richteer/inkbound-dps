@@ -127,3 +127,9 @@ impl PlayerStatList {
     //     }
     // }
 }
+
+impl Default for PlayerStatList {
+    fn default() -> Self {
+        Self::new()
+    }
+}

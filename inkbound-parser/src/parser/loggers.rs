@@ -89,6 +89,12 @@ impl DiveLog {
 
 }
 
+impl Default for DiveLog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Serialize, Debug, Clone, Default)]
 pub struct DataLog {
     pub dives: Vec<DiveLog>,

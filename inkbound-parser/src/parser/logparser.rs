@@ -200,31 +200,37 @@ impl LogParser {
     }
 }
 
+impl Default for LogParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
     use crate::parser::*;
     use super::{ParseEvent, InternalEvent};
 
-    static L_DAMAGE_NORMAL: &'static str = "0T23:17:51 70 I [EventSystem] broadcasting EventOnUnitDamaged-WorldStateChangeDamageUnit-TargetUnitHandle:(EntityHandle:78)-SourceEntityHandle:(EntityHandle:22)-TargetUnitTeam:Enemy-IsInActiveCombat:True-DamageAmount:25-IsCriticalHit:False-WasDodged:False-ActionData:ActionData-Flurry_BaseDamage_Action (UPNE5APs)-AbilityData:AbilityData-Flurry_AbilityData (Flurry my7gMbFo)-StatusEffectData:(none)-LootableData:(none)";
-    static L_DAMAGE_CRIT: &'static str = "0T23:17:51 70 I [EventSystem] broadcasting EventOnUnitDamaged-WorldStateChangeDamageUnit-TargetUnitHandle:(EntityHandle:78)-SourceEntityHandle:(EntityHandle:22)-TargetUnitTeam:Enemy-IsInActiveCombat:True-DamageAmount:25-IsCriticalHit:True-WasDodged:False-ActionData:ActionData-Flurry_BaseDamage_Action (UPNE5APs)-AbilityData:AbilityData-Flurry_AbilityData (Flurry my7gMbFo)-StatusEffectData:(none)-LootableData:(none)";
-    static L_DAMAGE_DODGED: &'static str = "0T23:17:51 70 I [EventSystem] broadcasting EventOnUnitDamaged-WorldStateChangeDamageUnit-TargetUnitHandle:(EntityHandle:78)-SourceEntityHandle:(EntityHandle:22)-TargetUnitTeam:Enemy-IsInActiveCombat:True-DamageAmount:25-IsCriticalHit:False-WasDodged:True-ActionData:ActionData-Flurry_BaseDamage_Action (UPNE5APs)-AbilityData:AbilityData-Flurry_AbilityData (Flurry my7gMbFo)-StatusEffectData:(none)-LootableData:(none)";
-    static L_UNIT_CLASS: &'static str = "0T23:24:03 57 I Setting unit class for animation-UnitEntityHandle:(EntityHandle:22)-classType:C02";
-    static L_START_DIVE: &'static str = "0T23:24:45 80 I Party run start triggered - solo party: False";
-    static L_START_COMBAT: &'static str = "0T23:26:31 50 I [EventSystem] broadcasting EventOnCombatStarted-WorldStateChangeCombatStarted-CombatZoneHandle:(EntityHandle:68)-TriggeringInteractableHandle:(EntityHandle:69)";
-    static L_END_COMBAT: &'static str = "0T23:47:19 32 I [EventSystem] broadcasting EventOnCombatEndSequenceStarted-WorldStateChangeCombatFinishedStartSequence";
-    static L_NEXT_TURN: &'static str = "0T23:45:57 21 I Evaluating quest progress for (EntityHandle:16) with 101 active quests. Record variable: QuestObjective_TurnCount";
-    static L_REGISTER_NAME: &'static str = "0T23:17:51 66 I TestPlayer (EntityHandle:22) is playing ability AbilityData-Flurry_AbilityData (Flurry my7gMbFo)";
-    static L_ORB_PICKUP: &'static str = "0T00:51:46 18 I [EventSystem] broadcasting EventOnPickupActivated-WorldStateChangePickupActivated-PlayerUnitHandle:(EntityHandle:9)-PickupHandle:(EntityHandle:95)-PickupData:PickupData-ManaOrbPickup (PickupData_pickupName-taadPy97-ccebe8a3bf921d043ac03a49bce8019f LzTNf24V)";
-    static L_SET_SELF: &'static str = "0T00:44:47 45 I Joining hub - characterId: 00000000000, characterName: TestName, partyId: 392f1b98-4d51-4379-8624-72cce1bab72b";
-    static L_ADD_STATUS: &'static str = "0T03:43:12 98 I [EventSystem] broadcasting EventOnUnitStatusEffectStacksAdded-WorldStateChangeUnitAddStatusEffectStacks-TargetUnitEntityHandle:(EntityHandle:1711)-CasterUnitEntityHandle:(EntityHandle:21)-TargetUnitTeam:Enemy-IsInActiveCombat:True-StatusEffectInstanceHandle:(Handle:3372)-StatusEffectData:StatusEffectData-Burn_StatusEffect (HelperData_titleKey-vdrSrrVG-f73d28c6d6a09c44e9b41ad2b3704826 sXmQNYjg)-StacksAdded:5-NewStacksValue:59";
+    static L_DAMAGE_NORMAL: &str = "0T23:17:51 70 I [EventSystem] broadcasting EventOnUnitDamaged-WorldStateChangeDamageUnit-TargetUnitHandle:(EntityHandle:78)-SourceEntityHandle:(EntityHandle:22)-TargetUnitTeam:Enemy-IsInActiveCombat:True-DamageAmount:25-IsCriticalHit:False-WasDodged:False-ActionData:ActionData-Flurry_BaseDamage_Action (UPNE5APs)-AbilityData:AbilityData-Flurry_AbilityData (Flurry my7gMbFo)-StatusEffectData:(none)-LootableData:(none)";
+    static L_DAMAGE_CRIT: &str = "0T23:17:51 70 I [EventSystem] broadcasting EventOnUnitDamaged-WorldStateChangeDamageUnit-TargetUnitHandle:(EntityHandle:78)-SourceEntityHandle:(EntityHandle:22)-TargetUnitTeam:Enemy-IsInActiveCombat:True-DamageAmount:25-IsCriticalHit:True-WasDodged:False-ActionData:ActionData-Flurry_BaseDamage_Action (UPNE5APs)-AbilityData:AbilityData-Flurry_AbilityData (Flurry my7gMbFo)-StatusEffectData:(none)-LootableData:(none)";
+    static L_DAMAGE_DODGED: &str = "0T23:17:51 70 I [EventSystem] broadcasting EventOnUnitDamaged-WorldStateChangeDamageUnit-TargetUnitHandle:(EntityHandle:78)-SourceEntityHandle:(EntityHandle:22)-TargetUnitTeam:Enemy-IsInActiveCombat:True-DamageAmount:25-IsCriticalHit:False-WasDodged:True-ActionData:ActionData-Flurry_BaseDamage_Action (UPNE5APs)-AbilityData:AbilityData-Flurry_AbilityData (Flurry my7gMbFo)-StatusEffectData:(none)-LootableData:(none)";
+    static L_UNIT_CLASS: &str = "0T23:24:03 57 I Setting unit class for animation-UnitEntityHandle:(EntityHandle:22)-classType:C02";
+    static L_START_DIVE: &str = "0T23:24:45 80 I Party run start triggered - solo party: False";
+    static L_START_COMBAT: &str = "0T23:26:31 50 I [EventSystem] broadcasting EventOnCombatStarted-WorldStateChangeCombatStarted-CombatZoneHandle:(EntityHandle:68)-TriggeringInteractableHandle:(EntityHandle:69)";
+    static L_END_COMBAT: &str = "0T23:47:19 32 I [EventSystem] broadcasting EventOnCombatEndSequenceStarted-WorldStateChangeCombatFinishedStartSequence";
+    static L_NEXT_TURN: &str = "0T23:45:57 21 I Evaluating quest progress for (EntityHandle:16) with 101 active quests. Record variable: QuestObjective_TurnCount";
+    static L_REGISTER_NAME: &str = "0T23:17:51 66 I TestPlayer (EntityHandle:22) is playing ability AbilityData-Flurry_AbilityData (Flurry my7gMbFo)";
+    static L_ORB_PICKUP: &str = "0T00:51:46 18 I [EventSystem] broadcasting EventOnPickupActivated-WorldStateChangePickupActivated-PlayerUnitHandle:(EntityHandle:9)-PickupHandle:(EntityHandle:95)-PickupData:PickupData-ManaOrbPickup (PickupData_pickupName-taadPy97-ccebe8a3bf921d043ac03a49bce8019f LzTNf24V)";
+    static L_SET_SELF: &str = "0T00:44:47 45 I Joining hub - characterId: 00000000000, characterName: TestName, partyId: 392f1b98-4d51-4379-8624-72cce1bab72b";
+    static L_ADD_STATUS: &str = "0T03:43:12 98 I [EventSystem] broadcasting EventOnUnitStatusEffectStacksAdded-WorldStateChangeUnitAddStatusEffectStacks-TargetUnitEntityHandle:(EntityHandle:1711)-CasterUnitEntityHandle:(EntityHandle:21)-TargetUnitTeam:Enemy-IsInActiveCombat:True-StatusEffectInstanceHandle:(Handle:3372)-StatusEffectData:StatusEffectData-Burn_StatusEffect (HelperData_titleKey-vdrSrrVG-f73d28c6d6a09c44e9b41ad2b3704826 sXmQNYjg)-StacksAdded:5-NewStacksValue:59";
 
     #[test]
     fn parse_damage_line() {
-        let damage_lines = vec![
+        let damage_lines = [
             L_DAMAGE_NORMAL,
             L_DAMAGE_CRIT,
-            L_DAMAGE_DODGED,
+            L_DAMAGE_DODGED
         ];
 
         let mut parser = LogParser::new();
@@ -237,10 +243,10 @@ mod tests {
                 assert_eq!(dmg.target, Entity::Id(78));
                 assert_eq!(dmg.ability, "Flurry_BaseDamage".to_string());
                 assert_eq!(dmg.amount, 25);
-                assert_eq!(dmg.crit, false);
-                assert_eq!(dmg.dodged, false);
+                assert!(!dmg.crit);
+                assert!(!dmg.dodged);
             },
-            Some(_) => assert!(false),
+            Some(_) => panic!(),
             None => panic!("Update the test case"),
         }
         match line.next() {
@@ -249,10 +255,10 @@ mod tests {
                 assert_eq!(dmg.target, Entity::Id(78));
                 assert_eq!(dmg.ability, "Flurry_BaseDamage".to_string());
                 assert_eq!(dmg.amount, 25);
-                assert_eq!(dmg.crit, true);
-                assert_eq!(dmg.dodged, false);
+                assert!(dmg.crit);
+                assert!(!dmg.dodged);
             },
-            Some(_) => assert!(false),
+            Some(_) => panic!(),
             None => panic!("Update the test case"),
         }
         match line.next() {
@@ -261,16 +267,15 @@ mod tests {
                 assert_eq!(dmg.target, Entity::Id(78));
                 assert_eq!(dmg.ability, "Flurry_BaseDamage".to_string());
                 assert_eq!(dmg.amount, 25);
-                assert_eq!(dmg.crit, false);
-                assert_eq!(dmg.dodged, true);
+                assert!(!dmg.crit);
+                assert!(dmg.dodged);
             },
-            Some(_) => assert!(false),
+            Some(_) => panic!(),
             None => panic!("Update the test case"),
         }
 
-        match line.next() {
-            Some(_) => panic!("Update the test case"),
-            None => (),
+        if line.next().is_some() {
+            panic!("Update the test case");
         }
     }
 
@@ -286,7 +291,7 @@ mod tests {
             },
             _ => {
                 println!("received {:?}", line);
-                assert!(false);
+                panic!();
             }
         }
     }
@@ -300,7 +305,7 @@ mod tests {
             ParseEvent::Parsed(Event::StartDive(_)) => (),
             _ => {
                 println!("received {:?}", line);
-                assert!(false);
+                panic!();
             }
         }
     }
@@ -320,7 +325,7 @@ mod tests {
             ParseEvent::Parsed(Event::StartCombat(_)) => (),
             _ => {
                 println!("received {:?}", line);
-                assert!(false);
+                panic!();
             }
         }
     }
@@ -334,7 +339,7 @@ mod tests {
             ParseEvent::Parsed(Event::EndCombat(_)) => (),
             _ => {
                 println!("received {:?}", line);
-                assert!(false);
+                panic!();
             }
         }
     }
@@ -348,7 +353,7 @@ mod tests {
             ParseEvent::Parsed(Event::NextTurn(_)) => (),
             _ => {
                 println!("received {:?}", line);
-                assert!(false);
+                panic!();
             }
         }
     }
@@ -362,7 +367,7 @@ mod tests {
             ParseEvent::Internal(InternalEvent::OrbPickup(_, id)) => assert_eq!(id, Entity::Id(9)),
             _ => {
                 println!("received {:?}", line);
-                assert!(false);
+                panic!();
             }
         }
     }
@@ -376,7 +381,7 @@ mod tests {
             ParseEvent::Parsed(Event::SetSelf(_, name)) => assert_eq!(name, "TestName".to_string()),
             _ => {
                 println!("received {:?}", line);
-                assert!(false);
+                panic!();
             }
         }
     }
@@ -397,7 +402,7 @@ mod tests {
             }
             _ => {
                 println!("received {:?}", line);
-                assert!(false);
+                panic!();
             }
         }
     }
@@ -429,7 +434,7 @@ mod tests {
         use std::io::*;
         use std::fs::*;
 
-        const LOGFILE_NAME: &'static str = "testing_logfile.log";
+        const LOGFILE_NAME: &str = "testing_logfile.log";
 
         let waiter = std::sync::Arc::new(std::sync::Barrier::new(2));
 
@@ -438,23 +443,23 @@ mod tests {
             std::thread::spawn(move || {
                 let mut file = std::fs::File::create(LOGFILE_NAME).unwrap();
                 // TODO: consider putting the newlines into the strings, or doing this cleaner
-                file.write(L_START_DIVE.as_bytes()).unwrap();
-                file.write(b"\n").unwrap();
-                file.write(L_START_COMBAT.as_bytes()).unwrap();
-                file.write(b"\n").unwrap();
-                file.write(L_REGISTER_NAME.as_bytes()).unwrap();
-                file.write(b"\n").unwrap();
-                file.write(L_UNIT_CLASS.as_bytes()).unwrap();
-                file.write(b"\n").unwrap();
-                file.write(L_DAMAGE_NORMAL.as_bytes()).unwrap();
-                file.write(b"\n").unwrap();
+                file.write_all(L_START_DIVE.as_bytes()).unwrap();
+                file.write_all(b"\n").unwrap();
+                file.write_all(L_START_COMBAT.as_bytes()).unwrap();
+                file.write_all(b"\n").unwrap();
+                file.write_all(L_REGISTER_NAME.as_bytes()).unwrap();
+                file.write_all(b"\n").unwrap();
+                file.write_all(L_UNIT_CLASS.as_bytes()).unwrap();
+                file.write_all(b"\n").unwrap();
+                file.write_all(L_DAMAGE_NORMAL.as_bytes()).unwrap();
+                file.write_all(b"\n").unwrap();
                 file.flush().unwrap();
 
                 waiter.wait(); // Let the reading thread parse the initial lines
                 waiter.wait(); // Wait on the reading thread to be done parsing initial lines
 
-                file.write(L_DAMAGE_NORMAL.as_bytes()).unwrap();
-                file.write(b"\n").unwrap();
+                file.write_all(L_DAMAGE_NORMAL.as_bytes()).unwrap();
+                file.write_all(b"\n").unwrap();
                 file.flush().unwrap();
 
                 waiter.wait(); // Let the reading thread parse the last line
@@ -474,7 +479,7 @@ mod tests {
         let mut cache_string = String::new();
         while reader.read_line(&mut cache_string).unwrap() != 0 {
             println!("read: {}", cache_string);
-            if let Some(event) = parser.parse_line(&cache_string.as_str()) {
+            if let Some(event) = parser.parse_line(cache_string.as_str()) {
                 datalog.handle_event(event);
             }
         }
@@ -494,7 +499,7 @@ mod tests {
         let mut cache_string = String::new();
         while reader.read_line(&mut cache_string).unwrap() != 0 {
             println!("read: {}", cache_string);
-            if let Some(event) = parser.parse_line(&cache_string.as_str()) {
+            if let Some(event) = parser.parse_line(cache_string.as_str()) {
                 datalog.handle_event(event);
             }
         }
