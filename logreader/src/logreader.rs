@@ -128,7 +128,7 @@ fn init_datalog_thread(filepath: &str, status: Arc<AtomicLogReaderStatus>, sende
                         if status.load(Ordering::Relaxed) != LogReaderStatus::Initializing {
                             status.store(LogReaderStatus::Reading, Ordering::Relaxed);
                         }
-                        if let Some(event) = parser.parse_line(&cache_string.as_str()) {
+                        if let Some(event) = parser.parse_line(cache_string.as_str()) {
                             cache_events.push(event);
                         }
                         cache_string.clear();
@@ -166,8 +166,8 @@ impl LogReaderState {
 
         let datalog = Arc::new(RwLock::new(DataLog::new()));
         let status = Arc::new(AtomicLogReaderStatus::new(LogReaderStatus::Initializing));
-        let datalog_thread = Some(init_datalog_thread(&filepath, status.clone(), sender.clone(), rx, datalog.clone(), skip_current));
-        let _watcher = start_watcher(sender.clone(), status.clone(), &filepath, poll_duration);
+        let datalog_thread = Some(init_datalog_thread(filepath, status.clone(), sender.clone(), rx, datalog.clone(), skip_current));
+        let _watcher = start_watcher(sender.clone(), status.clone(), filepath, poll_duration);
 
         Self {
             sender,
