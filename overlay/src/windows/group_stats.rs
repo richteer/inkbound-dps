@@ -54,7 +54,7 @@ impl WindowDisplay for GroupStatsWindow {
 }
 
 impl DiveCombatSplit for GroupStatsWindow {
-    fn mode<'a>(&'a mut self) -> &'a mut DiveCombatSelection {
+    fn mode(&mut self) -> &mut DiveCombatSelection {
         &mut self.mode
     }
 
@@ -62,23 +62,23 @@ impl DiveCombatSplit for GroupStatsWindow {
         self.mode = mode
     }
 
-    fn state<'a>(&'a mut self) -> &'a mut super::DiveCombatSelectionState {
+    fn state(&mut self) -> &mut super::DiveCombatSelectionState {
         &mut self.state
     }
 }
 
 impl StatSelection for GroupStatsWindow {
-    fn get_stat_selection<'a>(&'a self) -> &'a super::extractors::StatSelectionState {
+    fn get_stat_selection(&self) -> &super::extractors::StatSelectionState {
         &self.stat_selection
     }
 
-    fn get_stat_selection_mut<'a>(&'a mut self) -> &'a mut super::extractors::StatSelectionState {
+    fn get_stat_selection_mut(&mut self) -> &mut super::extractors::StatSelectionState {
         &mut self.stat_selection
     }
 }
 
 impl FormatSelection for GroupStatsWindow {
-    fn get_format<'a>(&'a mut self) -> &'a mut String {
+    fn get_format(&mut self) -> &mut String {
         &mut self.format
     }
 
@@ -97,7 +97,7 @@ impl FormatSelection for GroupStatsWindow {
     }
 }
 
-static DEFAULT_FORMAT: &'static str = "  {name} - {stat} ({percent:.2}%)";
+static DEFAULT_FORMAT: &str = "  {name} - {stat} ({percent:.2}%)";
 
 struct StatInfo {
     name: String,
@@ -118,7 +118,7 @@ impl StatInfo {
         }
     }
 
-    pub fn to_map<'a>(&'a self) -> HashMap<&str, Formattable<'a>> {
+    pub fn to_map(&self) -> HashMap<&str, Formattable<'_>> {
         [
             ("name", Formattable::display(&self.name)),
             ("stat", Formattable::float(&self.stat)),

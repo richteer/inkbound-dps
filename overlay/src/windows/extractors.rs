@@ -75,7 +75,7 @@ impl StatExtractionFunc {
             StatExtractionFunc::TotalCritDamageDealt => extract_total_crit_damage_dealt(player),
             StatExtractionFunc::TotalDamageReceived => extract_total_damage_received(player),
             StatExtractionFunc::PercentCritDamage => extract_percent_crit_damage(player),
-            StatExtractionFunc::StatusEffectApplied(status) => extract_status_effect_applied(player, &status),
+            StatExtractionFunc::StatusEffectApplied(status) => extract_status_effect_applied(player, status),
             StatExtractionFunc::OrbCount => extract_orb_count(player),
             StatExtractionFunc::DamagePerOrb => extract_damage_per_orb(player),
         }
@@ -117,8 +117,8 @@ impl std::fmt::Display for StatSelectionState {
 
 pub trait StatSelection {
     // TODO: figure out if there's a way to avoid needing both
-    fn get_stat_selection<'a>(&'a self) -> &'a StatSelectionState;
-    fn get_stat_selection_mut<'a>(&'a mut self) -> &'a mut StatSelectionState;
+    fn get_stat_selection(&self) -> &StatSelectionState;
+    fn get_stat_selection_mut(&mut self) -> &mut StatSelectionState;
 
     fn extract_stat(&self, player: &PlayerStats) -> ExtractType {
         self.get_stat_selection().selection.extract_stat(player)

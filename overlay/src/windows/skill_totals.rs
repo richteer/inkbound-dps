@@ -11,7 +11,7 @@ use crate::OverlayOptions;
 
 use super::{WindowDisplay, DiveCombatSelection, DiveCombatSplit, DiveCombatSelectionState, PlayerSelection, FormatSelection, div_or_zero};
 
-static DEFAULT_FORMAT: &'static str = "  {fancy} - {dmg} ({dmg_percent:.2}%)";
+static DEFAULT_FORMAT: &str = "  {fancy} - {dmg} ({dmg_percent:.2}%)";
 
 #[derive(Default, Debug)]
 pub struct SkillTotalsState {
@@ -33,13 +33,13 @@ pub struct SkillTotalsWindow {
 }
 
 impl PlayerSelection for SkillTotalsWindow {
-    fn player<'a>(&'a mut self) -> &'a mut Option<String> {
+    fn player(&mut self) -> &mut Option<String> {
         &mut self.player
     }
 }
 
 impl DiveCombatSplit for SkillTotalsWindow {
-    fn mode<'a>(&'a mut self) -> &'a mut DiveCombatSelection {
+    fn mode(&mut self) -> &mut DiveCombatSelection {
         &mut self.mode
     }
 
@@ -47,7 +47,7 @@ impl DiveCombatSplit for SkillTotalsWindow {
         self.mode = mode
     }
 
-    fn state<'a>(&'a mut self) -> &'a mut super::DiveCombatSelectionState {
+    fn state(&mut self) -> &mut super::DiveCombatSelectionState {
         &mut self.state
     }
 }
@@ -96,32 +96,32 @@ impl WindowDisplay for SkillTotalsWindow {
         match &self.player {
             Some(p) => format!("{base}: {p}"),
             // TODO: consider naming the window different if self-stats
-            None => format!("{base}"),
+            None => base.to_string(),
         }
     }
 }
 
 // TODO: probably optimize this, it's probably slow
 #[inline]
-fn clean_skill_name<'a>(name: &str) -> String {
+fn clean_skill_name(name: &str) -> String {
     name
         .replace("_BaseDamage", "")
         .replace("_DamageBase", "")
         .replace("Damage","")
         .replace("_StatusEffect", "")
         .replace("_Legendary","")
-        .replace("_"," ")
+        .replace('_'," ")
         .trim()
         .to_string()
 }
 
 #[inline]
-fn fancy_skill_name<'a>(name: &String) -> String {
+fn fancy_skill_name(name: &str) -> String {
     clean_skill_name(&name.replace("Upgrade", " ➡"))
 }
 
 #[inline]
-fn split_skill_name<'a>(name: &String) -> (String, Option<String>) {
+fn split_skill_name(name: &str) -> (String, Option<String>) {
     if let Some(name) = name.split_once("Upgrade") {
         (clean_skill_name(name.0), Some(clean_skill_name(name.1)))
     } else {
@@ -130,7 +130,7 @@ fn split_skill_name<'a>(name: &String) -> (String, Option<String>) {
 }
 
 impl FormatSelection for SkillTotalsWindow {
-    fn get_format<'a>(&'a mut self) -> &'a mut String {
+    fn get_format(&mut self) -> &mut String {
         &mut self.format
     }
 
@@ -170,11 +170,11 @@ struct SkillInfo {
 }
 
 impl SkillInfo {
-    pub fn new(name: &String, dmg: i64, crit: i64, total_dmg: i64) -> Self {
+    pub fn new(name: &str, dmg: i64, crit: i64, total_dmg: i64) -> Self {
         let (base, upgrade) = split_skill_name(name);
 
         Self {
-            label: name.clone(),
+            label: name.to_string(),
             name: upgrade.unwrap_or_else(|| base.clone()),
             base,
             fancy: fancy_skill_name(name),

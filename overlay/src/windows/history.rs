@@ -98,11 +98,11 @@ impl WindowDisplay for HistoryWindow {
 }
 
 impl StatSelection for HistoryWindow {
-    fn get_stat_selection<'a>(&'a self) -> &'a StatSelectionState {
+    fn get_stat_selection(&self) -> &StatSelectionState {
         &self.stat_selection
     }
 
-    fn get_stat_selection_mut<'a>(&'a mut self) -> &'a mut StatSelectionState {
+    fn get_stat_selection_mut(&mut self) -> &mut StatSelectionState {
         &mut self.stat_selection
     }
 }
@@ -199,7 +199,7 @@ impl HistoryWindow {
     #[inline]
     fn generate_split_bars(&self, dive: &DiveLog, colors: &ColorOptions) -> Vec<Bar> {
         let bar_group_width = self.options.group_bar_width;
-        dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
+        dive.combats.iter().rev().enumerate().flat_map(|(combat_index, combat)| {
             let players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
             let players = self.sort_players(players, self.options.bar_order);
             players.iter().enumerate().map(|(pind, p)| {
@@ -210,15 +210,15 @@ impl HistoryWindow {
                 let x_offset = pind * bar_width - ((bar_group_width - bar_width) / 2.0);
                 Bar::new(combat_index as f64 + x_offset + 1.0, self.extract_stat(p))
                     .name(format!("{} {}", p.player_data.name, combat_index + 1))
-                    .width(bar_width as f64)
+                    .width(bar_width)
                     .fill(colors.get_aspect_color(&p.player_data.class))
             }).collect::<Vec<Bar>>()
-        }).flatten().collect()
+        }).collect()
     }
 
     #[inline]
     fn generate_stacked_bars(&self, dive: &DiveLog, colors: &ColorOptions, percent: bool) -> (Vec<Bar>, Option<Vec<Text>>) {
-        let bars = dive.combats.iter().rev().enumerate().map(|(combat_index, combat)| {
+        let bars = dive.combats.iter().rev().enumerate().flat_map(|(combat_index, combat)| {
             let players: Vec<PlayerStats> = combat.player_stats.player_stats.values().cloned().collect();
             // Skip sum calculation if not in percent mode, save a bit of effort
             let total: f64 = if percent { players.iter().map(|e| self.extract_stat(e)).sum() } else { 0.0 };
@@ -242,7 +242,7 @@ impl HistoryWindow {
                     .width(self.options.stacked_bar_width)
                     .fill(colors.get_aspect_color(&p.player_data.class))
             }).collect::<Vec<Bar>>()
-        }).flatten().collect();
+        }).collect();
 
         // TODO: This totally can be done in one pass with the previous
         let texts = if self.options.stacked_show_totals {

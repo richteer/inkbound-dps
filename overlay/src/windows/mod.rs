@@ -62,7 +62,7 @@ impl OverlayWindow {
     pub fn new<T: WindowDisplay + Default + 'static>() -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
-            window: Box::new(T::default()),
+            window: Box::<T>::default(),
         }
     }
 
@@ -129,11 +129,11 @@ pub struct DiveCombatSelectionState {
 // Not really sure why the 'static lifetime is needed here
 pub trait DiveCombatSplit: WindowDisplay + Default + 'static {
     /// Return a mutable reference to however the window is storing the mode state
-    fn mode<'a>(&'a mut self) -> &'a mut DiveCombatSelection;
+    fn mode(&mut self) -> &mut DiveCombatSelection;
     /// Set the mode for the window, this is most likely only used by initialization
     fn set_mode(&mut self, mode: DiveCombatSelection);
     /// Get a mutable reference to the selected dive/combat state
-    fn state<'a>(&'a mut self) -> &'a mut DiveCombatSelectionState;
+    fn state(&mut self) -> &mut DiveCombatSelectionState;
 
     fn mode_selection(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
@@ -191,11 +191,11 @@ pub trait DiveCombatSplit: WindowDisplay + Default + 'static {
 
     fn get_current_player_stat_list<'a>(&mut self, data: &'a DataLog) -> Option<&'a HashMap<String, PlayerStats>> {
         match self.mode() {
-            DiveCombatSelection::Dive => data.dives.get(self.state().dive).and_then(|d| Some(&d.player_stats.player_stats)),
+            DiveCombatSelection::Dive => data.dives.get(self.state().dive).map(|d| &d.player_stats.player_stats),
             DiveCombatSelection::Combat => {
                 let state = self.state();
                 if let Some(dive) = data.dives.get(state.dive) {
-                    dive.combats.get(state.combat).and_then(|c| Some(&c.player_stats.player_stats))
+                    dive.combats.get(state.combat).map(|c| &c.player_stats.player_stats)
                 } else {
                     None
                 }
@@ -206,12 +206,12 @@ pub trait DiveCombatSplit: WindowDisplay + Default + 'static {
 
 pub trait PlayerSelection {
     /// Get a mutable reference to how the window is storing the player state
-    fn player<'a>(&'a mut self) -> &'a mut Option<String>;
+    fn player(&mut self) -> &mut Option<String>;
 
     fn show_player_selection_box(&mut self, ui: &mut egui::Ui, player_stats: &HashMap<String, PlayerStats>) {
         let player = self.player();
         egui::ComboBox::from_label("Select Player")
-                    .selected_text(format!("{}", player.as_ref().unwrap_or(&"".to_string())))
+                    .selected_text(player.as_ref().unwrap_or(&"".to_string()).to_string())
                     .show_ui(ui, |ui| {
                         // Assumes None -> pov character. Probably could be improved, especially if POV detection fails
                         ui.selectable_value(player, None, "YOU");
@@ -241,7 +241,7 @@ pub trait PlayerDiveCombatOptions: DiveCombatSplit + PlayerSelection {
 // Automatically implement PlayerDiveCombatOptions for windows that implement both dive/combat and player selection
 impl<T> PlayerDiveCombatOptions for T where T: DiveCombatSplit + PlayerSelection {}
 
-static FORMAT_SELECTION_HELP: &'static str =
+static FORMAT_SELECTION_HELP: &str =
 "Enter a text formatter string, and all valid patterns contained in {braces} will be filled with its respective value.
 Any other characters will be printed verbatim. See the box below for a list of valid patterns.
     NOTE: entering an invalid {pattern} will cause the whole format string to fail.
@@ -251,7 +251,7 @@ For example, to print a float with only two decimal places, use:
 {value:.2}
 ";
 pub trait FormatSelection {
-    fn get_format<'a>(&'a mut self) -> &'a mut String;
+    fn get_format(&mut self) -> &mut String;
     fn default_format() -> &'static str;
     fn hover_text() -> &'static str;
 
@@ -293,4 +293,4 @@ impl AspectAbbv for Aspect {
     }
 }
 
-static NO_DATA_MSG: &'static str = "Waiting for data...";
+static NO_DATA_MSG: &str = "Waiting for data...";

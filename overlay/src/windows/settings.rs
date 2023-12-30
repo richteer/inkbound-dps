@@ -217,7 +217,7 @@ pub fn draw_color_settings_window(overlay: &mut Overlay, ctx: &egui::Context) {
                     let label = ui.add(label);
                     if label.clicked() {
                         *color = aspect.default_color();
-                        overlay.options.colors.aspects.remove(&aspect); // Doesn't matter if it's not actually there
+                        overlay.options.colors.aspects.remove(aspect); // Doesn't matter if it's not actually there
                         cpicker.mark_changed();
                     };
                     if cpicker.changed() {

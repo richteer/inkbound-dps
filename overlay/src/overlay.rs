@@ -7,9 +7,9 @@ use crate::{windows::{self, WindowDisplay, WindowId, OverlayWindow}, options::Ov
 
 use logreader::LogReader;
 
-static OPTIONS_STORAGE_KEY: &'static str = "overlayoptions";
-static WINDOWS_STORAGE_KEY: &'static str = "overlaywindows";
-static ENABLED_WINDOWS_STORAGE_KEY: &'static str = "overlayenabledwindows";
+static OPTIONS_STORAGE_KEY: &str = "overlayoptions";
+static WINDOWS_STORAGE_KEY: &str = "overlaywindows";
+static ENABLED_WINDOWS_STORAGE_KEY: &str = "overlayenabledwindows";
 
 // Convenience types to hide clutter and re-use in tests
 type WindowConfig = BTreeMap<WindowId, OverlayWindow>;
@@ -289,10 +289,10 @@ mod tests {
         let storage: HashMap<String, String> = ron::de::from_str(EXAMPLE).expect("Failed to parse example ron");
 
         ron::from_str::<OverlayOptions>(storage.get(OPTIONS_STORAGE_KEY)
-            .expect(&format!("no {OPTIONS_STORAGE_KEY} in example"))).unwrap();
+            .unwrap_or_else(|| panic!("no {OPTIONS_STORAGE_KEY} in example"))).unwrap();
         ron::from_str::<WindowConfig>(storage.get(WINDOWS_STORAGE_KEY)
-            .expect(&format!("no {WINDOWS_STORAGE_KEY} in example"))).unwrap();
+            .unwrap_or_else(|| panic!("no {WINDOWS_STORAGE_KEY} in example"))).unwrap();
         ron::from_str::<EnabledWindowConfig>(storage.get(ENABLED_WINDOWS_STORAGE_KEY)
-            .expect(&format!("no options in example"))).unwrap();
+            .unwrap_or_else(|| panic!("no options in example"))).unwrap();
     }
 }

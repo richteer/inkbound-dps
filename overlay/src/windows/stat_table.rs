@@ -10,10 +10,7 @@ use super::{extractors::StatExtractionFunc, DiveCombatSplit, DiveCombatSelection
 
 fn gen_extractors() -> Vec<StatExtractionFunc> {
     StatExtractionFunc::iter()
-        .filter(|e| match e {
-            StatExtractionFunc::StatusEffectApplied(_) => false,
-            _ => true,
-        }).chain(
+        .filter(|e| !matches!(e, StatExtractionFunc::StatusEffectApplied(_))).chain(
             ["Poison", "Burn", "Bleed", "Frostbite"].iter()
                 .map(|se| StatExtractionFunc::StatusEffectApplied(se.to_string()))
         ).collect()
@@ -32,7 +29,7 @@ pub struct StatTableWindow {
 }
 
 impl DiveCombatSplit for StatTableWindow {
-    fn mode<'a>(&'a mut self) -> &'a mut super::DiveCombatSelection {
+    fn mode(&mut self) -> &mut super::DiveCombatSelection {
         &mut self.mode
     }
 
@@ -40,7 +37,7 @@ impl DiveCombatSplit for StatTableWindow {
         self.mode = mode
     }
 
-    fn state<'a>(&'a mut self) -> &'a mut super::DiveCombatSelectionState {
+    fn state(&mut self) -> &mut super::DiveCombatSelectionState {
         &mut self.state
     }
 }
@@ -78,9 +75,8 @@ impl WindowDisplay for StatTableWindow {
                     });
                     for player in player_stats.values() {
                         row.col(|ui| {
-                            ui.label(format!("{}", STAT_ROWS[index].extract_formatted_stat(player)));
-                        });
-                    }
+                            ui.label(STAT_ROWS[index].extract_formatted_stat(player).to_string());
+                        });                    }
                 });
             });
     }
