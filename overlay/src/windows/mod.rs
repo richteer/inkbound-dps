@@ -42,6 +42,16 @@ pub fn inverted_number_label(current: usize, total: usize) -> String {
     })
 }
 
+/// Divide two numbers. If the result isn't a normal number, return zero instead.
+fn div_or_zero(x: f64, y: f64) -> f64 {
+    let ret = x / y;
+    if ret.is_normal() {
+        ret
+    } else {
+        0.0
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OverlayWindow {
     pub id: WindowId,

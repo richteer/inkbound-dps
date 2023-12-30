@@ -2,6 +2,8 @@ use inkbound_parser::parser::PlayerStats;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
+use super::div_or_zero;
+
 // In case I change my mind...
 type ExtractType = f64;
 
@@ -18,7 +20,7 @@ fn extract_total_damage_received(player: &PlayerStats) -> ExtractType {
 }
 
 fn extract_percent_crit_damage(player: &PlayerStats) -> ExtractType {
-    extract_total_crit_damage_dealt(player) / player.total_damage_dealt as ExtractType * 100.0
+    div_or_zero(extract_total_crit_damage_dealt(player), player.total_damage_dealt as ExtractType) * 100.0
 }
 
 fn extract_status_effect_applied(player: &PlayerStats, status: &str) -> ExtractType {
@@ -30,11 +32,7 @@ fn extract_orb_count(player: &PlayerStats) -> ExtractType {
 }
 
 fn extract_damage_per_orb(player: &PlayerStats) -> ExtractType {
-    if player.orb_pickups != 0 {
-        player.total_damage_dealt as f64 / player.orb_pickups as f64
-    } else {
-        0.0
-    }
+    div_or_zero(player.total_damage_dealt as f64, player.orb_pickups as f64)
 }
 
 #[derive(Default, Debug, Deserialize, Serialize, EnumIter, PartialEq, Clone)]

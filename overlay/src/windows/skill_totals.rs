@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::OverlayOptions;
 
-use super::{WindowDisplay, DiveCombatSelection, DiveCombatSplit, DiveCombatSelectionState, PlayerSelection, FormatSelection};
+use super::{WindowDisplay, DiveCombatSelection, DiveCombatSplit, DiveCombatSelectionState, PlayerSelection, FormatSelection, div_or_zero};
 
 static DEFAULT_FORMAT: &'static str = "  {fancy} - {dmg} ({dmg_percent:.2}%)";
 
@@ -179,10 +179,10 @@ impl SkillInfo {
             base,
             fancy: fancy_skill_name(name),
             dmg,
-            dmg_percent: dmg as f64 / total_dmg as f64 * 100.0,
+            dmg_percent: div_or_zero(dmg as f64, total_dmg as f64) * 100.0,
             crit,
-            crit_dmg_percent: crit as f64 / dmg as f64 * 100.0,
-            crit_total_percent: crit as f64 / total_dmg as f64 * 100.0,
+            crit_dmg_percent: div_or_zero(crit as f64, dmg as f64) * 100.0,
+            crit_total_percent: div_or_zero(crit as f64, total_dmg as f64) * 100.0,
         }
     }
 

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use interpolator::*;
 use derivative::Derivative;
 
-use super::{extractors::{StatSelection, StatSelectionState}, FormatSelection, AspectAbbv};
+use super::{extractors::{StatSelection, StatSelectionState}, FormatSelection, AspectAbbv, div_or_zero};
 
 use crate::OverlayOptions;
 
@@ -112,7 +112,7 @@ impl StatInfo {
         Self {
             name: stats.player_data.name.clone(),
             stat,
-            percent: stat / total * 100.0,
+            percent: div_or_zero(stat, total) * 100.0,
             class: stats.player_data.class.to_string(),
             cls: stats.player_data.class.abbv(),
         }
