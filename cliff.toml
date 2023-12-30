@@ -69,6 +69,7 @@ commit_parsers = [
   { message = "^chore\\(pr\\)", skip = true },
   { message = "^chore\\(pull\\)", skip = true },
   { message = "^chore|ci", group = "Miscellaneous Tasks" },
+  { message = "^clippy", skip = true },
   { body = ".*security", group = "Security" },
   { message = "^revert", group = "Revert" },
 ]
