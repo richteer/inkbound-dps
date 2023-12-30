@@ -11,7 +11,7 @@ use super::{extractors::StatExtractionFunc, DiveCombatSplit, DiveCombatSelection
 fn gen_extractors() -> Vec<StatExtractionFunc> {
     StatExtractionFunc::iter()
         .filter(|e| !matches!(e, StatExtractionFunc::StatusEffectApplied(_))).chain(
-            ["Poison", "Burn", "Bleed", "Frostbite"].iter()
+            super::ALLOWED_STATUS_EFFECTS.iter()
                 .map(|se| StatExtractionFunc::StatusEffectApplied(se.to_string()))
         ).collect()
 }

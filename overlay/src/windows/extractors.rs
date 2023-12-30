@@ -138,8 +138,8 @@ pub trait StatSelection {
                 .selected_text(stat_selection.status_selection.to_string())
                 .show_ui(ui, |ui| {
                     // TODO: configure this, perhaps allow custom overrides
-                    for status in ["Poison", "Burn", "Bleed", "Frostbite"].into_iter() {
-                        ui.selectable_value(&mut stat_selection.status_selection, status.to_string(), status);
+                    for status in super::ALLOWED_STATUS_EFFECTS.iter() {
+                        ui.selectable_value(&mut stat_selection.status_selection, status.to_string(), *status);
                     }
                 });
             stat_selection.selection = StatExtractionFunc::StatusEffectApplied(stat_selection.status_selection.clone());

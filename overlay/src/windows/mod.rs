@@ -294,3 +294,11 @@ impl AspectAbbv for Aspect {
 }
 
 static NO_DATA_MSG: &str = "Waiting for data...";
+
+pub static ALLOWED_STATUS_EFFECTS: [&str; 5] = [
+    "Poison",
+    "Burn",
+    "Bleed",
+    "Frostbite",
+    "Spiked",
+];
