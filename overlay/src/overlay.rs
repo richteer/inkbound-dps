@@ -30,6 +30,7 @@ pub struct Overlay {
     pub options: OverlayOptions,
     pub windows: WindowConfig,
     pub enabled_windows: EnabledWindowConfig,
+    pub overlay_mode: OverlayMode,
 }
 
 pub fn default_windows() -> WindowConfig {
@@ -68,11 +69,7 @@ fn load_from_storage<T: Default + DeserializeOwned>(storage: Option<&dyn eframe:
 }
 
 impl Overlay {
-    pub fn new(_cc: &eframe::CreationContext<'_>, logreader: LogReader) -> Self {
-        // Customize egui here with cc.egui_ctx.set_fonts and cc.egui_ctx.set_visuals.
-        // Restore app state using cc.storage (requires the "persistence" feature).
-        // Use the cc.gl (a glow::Context) to create graphics shaders and buffers that you can use
-        // for e.g. egui::PaintCallback.
+    pub fn new(_cc: &eframe::CreationContext<'_>, logreader: LogReader, overlay_mode: OverlayMode) -> Self {
         _cc.egui_ctx.set_visuals(egui::style::Visuals {
             ..Default::default()
         });
@@ -115,6 +112,45 @@ impl Overlay {
             options,
             windows,
             enabled_windows,
+            overlay_mode,
+        }
+    }
+
+    fn update_mouse_passthrough(&self, ctx: &egui::Context) {
+        use mouse_position::mouse_position::Mouse;
+        match Mouse::get_mouse_position() {
+            Mouse::Position { x, y } => {
+                let mut pointer_pos: Pos2 = [x as f32, y as f32].into();
+
+                // Convert the absolute pointer position to egui points
+                pointer_pos.x /= ctx.pixels_per_point();
+                pointer_pos.y /= ctx.pixels_per_point();
+
+                // Get window position in egui points
+                let window_pos = ctx.input(|i| i.viewport().inner_rect);
+                // Do nothing if window_pos is none, probably because the window is minimized
+                if let Some(window_pos) = window_pos {
+                    let window_pos = window_pos.min;
+
+                    // Adjust absolute pointer pos to egui relative position
+                    pointer_pos -= window_pos.to_vec2();
+
+                    #[cfg(debug_assertions)]
+                    if let Some(pos) = ctx.input(|i| i.pointer.latest_pos()) {
+                        // For debugging when the mouse is slightly offset for some reason
+                        log::trace!("pos - pointer_pos = {:?}", pos - pointer_pos);
+                    };
+                    if ctx.is_pos2_over_area(pointer_pos) {
+                        log::trace!("is over area, disabling passthrough");
+                        ctx.send_viewport_cmd(ViewportCommand::MousePassthrough(false));
+                    } else {
+                        log::trace!("enabling passthrough");
+                        ctx.send_viewport_cmd(ViewportCommand::MousePassthrough(true));
+                    }
+                }
+
+            },
+            Mouse::Error => log::error!("error getting mouse position"),
         }
     }
 }
@@ -152,40 +188,9 @@ impl eframe::App for Overlay {
             style.text_styles.insert(egui::style::TextStyle::Small, egui::FontId { size: self.options.plot_font_size, family: egui::FontFamily::Proportional }).unwrap();
         });
 
-        use mouse_position::mouse_position::Mouse;
-        match Mouse::get_mouse_position() {
-            Mouse::Position { x, y } => {
-                let mut pointer_pos: Pos2 = [x as f32, y as f32].into();
-
-                // Convert the absolute pointer position to egui points
-                pointer_pos.x /= ctx.pixels_per_point();
-                pointer_pos.y /= ctx.pixels_per_point();
-
-                // Get window position in egui points
-                let window_pos = ctx.input(|i| i.viewport().inner_rect);
-                // Do nothing if window_pos is none, probably because the window is minimized
-                if let Some(window_pos) = window_pos {
-                    let window_pos = window_pos.min;
-
-                    // Adjust absolute pointer pos to egui relative position
-                    pointer_pos -= window_pos.to_vec2();
-
-                    #[cfg(debug_assertions)]
-                    if let Some(pos) = ctx.input(|i| i.pointer.latest_pos()) {
-                        // For debugging when the mouse is slightly offset for some reason
-                        log::trace!("pos - pointer_pos = {:?}", pos - pointer_pos);
-                    };
-                    if ctx.is_pos2_over_area(pointer_pos) {
-                        log::trace!("is over area, disabling passthrough");
-                        ctx.send_viewport_cmd(ViewportCommand::MousePassthrough(false));
-                    } else {
-                        log::trace!("enabling passthrough");
-                        ctx.send_viewport_cmd(ViewportCommand::MousePassthrough(true));
-                    }
-                }
-
-            },
-            Mouse::Error => log::error!("error getting mouse position"),
+        match self.overlay_mode {
+            OverlayMode::Overlay => self.update_mouse_passthrough(ctx),
+            OverlayMode::WindowedOverlay => (),
         }
 
         draw_overlay(self, ctx);
@@ -266,7 +271,7 @@ pub fn spawn_overlay(logreader: LogReader, mode: OverlayMode) {
         ..Default::default()
     };
 
-    eframe::run_native("Inkbound Overlay", native_options, Box::new(|c| Box::new(Overlay::new(c, logreader)))).unwrap();
+    eframe::run_native("Inkbound Overlay", native_options, Box::new(|c| Box::new(Overlay::new(c, logreader, mode)))).unwrap();
 }
 
 
